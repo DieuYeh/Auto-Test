@@ -288,11 +288,11 @@ class App(tk.Tk):
 
         # 簡單地選擇 Result 資料夾中的第一個 Excel 檔案作為 Testplan
         # 你可以根據需要修改此邏輯，例如讓使用者選擇哪個 Testplan
-        testplan_path = os.path.join("Result", excel_files_in_result[0])
+        testplan_path_in_result = os.path.join("Result", excel_files_in_result[0])
 
         try:
             # 讀取 Excel Testplan
-            workbook = load_workbook(testplan_path)
+            workbook = load_workbook(testplan_path_in_result)
             sheet = workbook.active # 預設使用活動工作表
 
             # 獲取讀取和寫入的行列資訊
@@ -341,9 +341,24 @@ class App(tk.Tk):
                     sheet.cell(row=row_idx + 1, column=write_col_idx + 1, value=result_to_write)
                     print(f"將 {testcase_name} 的結果 '{result_to_write}' 寫入到 {get_column_letter(write_col_idx + 1)}{row_idx + 1}")
 
-            # 保存修改後的 Excel 檔案
-            workbook.save(testplan_path)
-            messagebox.showinfo("成功", "結果已成功寫入 Excel Testplan 並保存！")
+            # --- 新增的檔案儲存對話框 ---
+            # 建議的預設檔名，例如在原檔名後加上 "_updated" 或 "_results"
+            original_filename = os.path.basename(testplan_path_in_result)
+            name, ext = os.path.splitext(original_filename)
+            default_save_filename = f"{name}_results{ext}"
+
+            save_path = filedialog.asksaveasfilename(
+                defaultextension=".xlsx",
+                filetypes=[("Excel files", "*.xlsx"), ("All files", "*.*")],
+                initialfile=default_save_filename
+            )
+
+            if not save_path: # 如果使用者取消了儲存
+                messagebox.showwarning("取消", "已處理的 Excel 檔案未保存。")
+                return
+
+            workbook.save(save_path)
+            messagebox.showinfo("成功", f"結果已成功寫入 Excel 並保存到:\n{save_path}")
 
         except Exception as e:
             messagebox.showerror("錯誤", f"寫入結果到 Excel 時發生錯誤: {e}")
