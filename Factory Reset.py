@@ -105,7 +105,7 @@ class MyTestCase(unittest.TestCase):
         time.sleep(2)
 
         # 定位到slider_Brightness元素
-        slider_Brightness = self.driver.find_element(By.ID, "input_Brightness1")
+        slider_Brightness = self.driver.find_element(By.ID, "input_Brightness")
         slider_Brightness_style = slider_Brightness.get_attribute('value')
         print(slider_Brightness_style)
         if slider_Brightness_style=="50%":
