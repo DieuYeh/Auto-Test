@@ -1,11 +1,12 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
+from tkinter import filedialog, ttk
 import re
 import os
 import shutil
 from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter
 from bs4 import BeautifulSoup
+import subprocess
 
 class App(tk.Tk):
     def __init__(self):
@@ -17,7 +18,13 @@ class App(tk.Tk):
         self.selected_cases_by_file = {} 
         self.tree_file_nodes = {} 
         self.last_py_folder = None 
+        self.last_html_report_folder = None # 新增：用於儲存最近一次選擇的 HTML 報告資料夾
+        self.last_excel_save_path = None # 新增：用於儲存最近一次保存 Excel 結果的路徑
         
+        # 狀態訊息顯示區塊 (簡化為一行)
+        self.status_label = tk.Label(self, text="準備就緒", bd=1, relief=tk.SUNKEN, anchor=tk.W, font=("Arial", 10))
+        self.status_label.pack(side=tk.TOP, fill=tk.X, padx=5, pady=5)
+
         self.notebook = ttk.Notebook(self)
         self.notebook.pack(expand=True, fill="both", padx=10, pady=10)
 
@@ -28,6 +35,20 @@ class App(tk.Tk):
         self.excel_tab = ttk.Frame(self.notebook)
         self.notebook.add(self.excel_tab, text="Excel 報告處理")
         self.create_excel_tab_widgets(self.excel_tab)
+
+    # 用於顯示狀態訊息的輔助函式 (簡化)
+    def show_status_message(self, message, message_type="info"):
+        color = "black" 
+        if message_type == "warning":
+            color = "orange"
+        elif message_type == "error":
+            color = "red"
+        elif message_type == "success":
+            color = "green"
+        
+        self.status_label.config(text=message, fg=color)
+        # 5秒後自動清除訊息，恢復為"準備就緒"
+        self.after(5000, lambda: self.status_label.config(text="準備就緒", fg="black"))
 
     def create_py_tab_widgets(self, parent_frame):
         # 檔案選擇區
@@ -40,37 +61,12 @@ class App(tk.Tk):
         select_files_btn = tk.Button(file_frame, text="載入 PY 檔案", command=self.load_py_files)
         select_files_btn.pack(side=tk.RIGHT)
 
-        # 搜尋設定區 (保持不變)
+        # 搜尋設定區
         search_frame = tk.LabelFrame(parent_frame, text="測項分析", padx=10, pady=10)
         search_frame.pack(fill="x", padx=10, pady=5)
-
-        # 選項按鈕區
-        option_frame = tk.Frame(parent_frame, padx=10, pady=5)
-        option_frame.pack(fill="x", padx=10, pady=5)
-
-        select_all_btn = tk.Button(option_frame, text="全選所有測項", command=self.select_all_test_items)
-        select_all_btn.pack(side=tk.LEFT, padx=5)
-
-        deselect_all_btn = tk.Button(option_frame, text="全取消所有測項", command=self.deselect_all_test_items)
-        deselect_all_btn.pack(side=tk.LEFT, padx=5)
-
-        self.selected_count_label = tk.Label(option_frame, text="已勾選測項: 0")
-        self.selected_count_label.pack(side=tk.LEFT, padx=10)
-        
-        # 開啟資料夾按鈕
-        self.open_folder_btn = tk.Button(option_frame, text="開啟資料夾", command=self.open_last_py_folder, state=tk.DISABLED)
-        self.open_folder_btn.pack(side=tk.RIGHT, padx=5)
-
-        # 匯出Unit plan
-        export_btn = tk.Button(option_frame, text="匯出 Unittest Plan", command=self.export_unittest_plan)
-        export_btn.pack(side=tk.RIGHT)
-
-        # 匯出狀態提示文字
-        self.export_status_label = tk.Label(option_frame, text="", fg="red")
-        self.export_status_label.pack(side=tk.RIGHT, padx=5)
         tk.Label(search_frame, text="備註: 將會分析PY內所含 \"test_case\"的測項，請符合名稱設計。", fg="blue").pack(side=tk.LEFT, padx=5)
 
-        # 結果顯示區 (Treeview) (保持不變)
+        # 結果顯示區 (Treeview)
         result_frame = tk.LabelFrame(parent_frame, text="測項選擇結果", padx=10, pady=10)
         result_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
@@ -92,21 +88,41 @@ class App(tk.Tk):
 
         self.tree.bind("<ButtonRelease-1>", self.on_tree_click) 
 
+        # 選項按鈕區
+        option_frame = tk.Frame(parent_frame, padx=10, pady=5)
+        option_frame.pack(fill="x", padx=10, pady=5)
 
+        select_all_btn = tk.Button(option_frame, text="全選所有測項", command=self.select_all_test_items)
+        select_all_btn.pack(side=tk.LEFT, padx=5)
+
+        deselect_all_btn = tk.Button(option_frame, text="全取消所有測項", command=self.deselect_all_test_items)
+        deselect_all_btn.pack(side=tk.LEFT, padx=5)
+
+        self.selected_count_label = tk.Label(option_frame, text="已勾選測項: 0")
+        self.selected_count_label.pack(side=tk.LEFT, padx=10)
+        
+        # 開啟資料夾按鈕 (PY分頁)
+        self.open_py_folder_btn = tk.Button(option_frame, text="開啟PY資料夾", command=self.open_last_py_folder, state=tk.DISABLED)
+        self.open_py_folder_btn.pack(side=tk.RIGHT, padx=5)
+
+        # 匯出 Unit Plan 按鈕
+        export_btn = tk.Button(option_frame, text="匯出 Unittest Plan", command=self.export_unittest_plan)
+        export_btn.pack(side=tk.RIGHT)
+        
     def open_last_py_folder(self):
         if self.last_py_folder and os.path.isdir(self.last_py_folder):
             try:
-                # 針對不同作業系統使用不同的開啟指令
                 if os.sys.platform == "win32":
                     os.startfile(self.last_py_folder)
-                elif os.sys.platform == "darwin": # macOS
+                elif os.sys.platform == "darwin": 
                     subprocess.Popen(["open", self.last_py_folder])
-                else: # Linux
+                else: 
                     subprocess.Popen(["xdg-open", self.last_py_folder])
+                self.show_status_message(f"已開啟PY資料夾: {self.last_py_folder}", "info")
             except Exception as e:
-                messagebox.showerror("錯誤", f"無法開啟資料夾: {e}")
+                self.show_status_message(f"無法開啟PY資料夾: {e}", "error")
         else:
-            messagebox.showwarning("警告", "沒有可開啟的資料夾路徑。請先載入 PY 檔案。")
+            self.show_status_message("沒有可開啟的PY資料夾路徑。請先載入 PY 檔案。", "warning")
 
     def create_excel_tab_widgets(self, parent_frame):
         excel_settings_frame = tk.LabelFrame(parent_frame, text="Excel 設定", padx=10, pady=10)
@@ -137,11 +153,38 @@ class App(tk.Tk):
         write_results_btn = tk.Button(excel_buttons_frame, text="寫入結果 (HTML -> Excel)", command=self.write_results_to_excel)
         write_results_btn.pack(side=tk.LEFT, padx=5)
 
+        # 新增：開啟報告資料夾按鈕 (Excel分頁)
+        self.open_report_folder_btn = tk.Button(excel_buttons_frame, text="開啟報告資料夾", command=self.open_last_report_folder, state=tk.DISABLED)
+        self.open_report_folder_btn.pack(side=tk.RIGHT, padx=5)
+
+    def open_last_report_folder(self):
+        target_folder = None
+        if self.last_excel_save_path and os.path.isdir(os.path.dirname(self.last_excel_save_path)):
+            target_folder = os.path.dirname(self.last_excel_save_path)
+            message_type = "Excel結果"
+        elif self.last_html_report_folder and os.path.isdir(self.last_html_report_folder):
+            target_folder = self.last_html_report_folder
+            message_type = "HTML報告"
+        else:
+            self.show_status_message("沒有可開啟的報告資料夾路徑。請先載入 HTML 報告或保存 Excel 結果。", "warning")
+            return
+
+        try:
+            if os.sys.platform == "win32":
+                os.startfile(target_folder)
+            elif os.sys.platform == "darwin": 
+                subprocess.Popen(["open", target_folder])
+            else: 
+                subprocess.Popen(["xdg-open", target_folder])
+            self.show_status_message(f"已開啟{message_type}資料夾: {target_folder}", "info")
+        except Exception as e:
+            self.show_status_message(f"無法開啟報告資料夾: {e}", "error")
+
     def load_py_files(self):
         file_paths = filedialog.askopenfilenames(filetypes=[("Python files", "*.py")])
         if file_paths:
             self.py_files.clear() 
-            self.last_py_folder = os.path.dirname(file_paths[0]) # 儲存第一個PY檔案的資料夾路徑
+            self.last_py_folder = os.path.dirname(file_paths[0]) 
             
             for file_path in file_paths:
                 module_name = os.path.splitext(os.path.basename(file_path))[0]
@@ -151,17 +194,18 @@ class App(tk.Tk):
                 displayed_names = ", ".join([os.path.basename(path) for path in self.py_files.keys()])
                 self.file_list_label.config(text=f"已選擇: {displayed_names}")
                 self.analyze_all_py_files() 
-                self.open_folder_btn.config(state=tk.NORMAL) # 啟用按鈕
-                self.export_status_label.config(text="") # 清除匯出狀態提示
+                self.open_py_folder_btn.config(state=tk.NORMAL) # 更新按鈕名稱
+                self.show_status_message(f"已載入 {len(file_paths)} 個 PY 檔案。", "success")
             else:
                 self.file_list_label.config(text="未載入任何 PY 檔案")
-                self.open_folder_btn.config(state=tk.DISABLED) # 禁用按鈕
-                self.export_status_label.config(text="") # 清除匯出狀態提示
-
+                self.open_py_folder_btn.config(state=tk.DISABLED) # 更新按鈕名稱
+                self.show_status_message("未載入任何 PY 檔案。", "warning")
+        else:
+            self.show_status_message("取消載入 PY 檔案。", "info")
 
     def analyze_all_py_files(self):
         if not self.py_files:
-            messagebox.showwarning("警告", "請先載入 PY 檔案！")
+            self.show_status_message("請先載入 PY 檔案！", "warning")
             return
 
         self.selected_cases_by_file.clear()
@@ -224,9 +268,13 @@ class App(tk.Tk):
 
             except Exception as e:
                 self.tree.item(file_node_id, values=("", f"{file_display_name} (讀取失敗: {e})", "☐"))
-                messagebox.showerror("錯誤", f"讀取或搜尋檔案 '{file_display_name}' 時發生錯誤: {e}")
+                self.show_status_message(f"讀取或搜尋檔案 '{file_display_name}' 時發生錯誤: {e}", "error")
 
         self.update_selected_count_label()
+        if total_cases_found > 0:
+            self.show_status_message(f"已成功分析所有 PY 檔案，共找到 {total_cases_found} 個測試案例。", "success")
+        else:
+            self.show_status_message("未在載入的 PY 檔案中找到任何測試案例。", "warning")
 
     def on_tree_click(self, event):
         item_id = self.tree.identify_row(event.y)
@@ -267,7 +315,7 @@ class App(tk.Tk):
                     child_case_name = parts[1]
 
                     if child_py_path == py_file_path:
-                        self.selected_cases_by_file[child_py_path][child_case_name].set(new_state)
+                        self.selected_cases_by_file[child_py_path][case_name].set(new_state)
                         self.update_checkbox_display(child_id, new_state)
                 
                 self.update_file_node_checkbox_display(py_file_path)
@@ -334,6 +382,7 @@ class App(tk.Tk):
                 self.update_checkbox_display(item_id, True)
             self.update_file_node_checkbox_display(py_file_path) 
         self.update_selected_count_label()
+        self.show_status_message("已全選所有測試案例。", "info")
 
     def deselect_all_test_items(self):
         for py_file_path, file_cases in self.selected_cases_by_file.items():
@@ -343,11 +392,11 @@ class App(tk.Tk):
                 self.update_checkbox_display(item_id, False)
             self.update_file_node_checkbox_display(py_file_path) 
         self.update_selected_count_label()
+        self.show_status_message("已取消全選所有測試案例。", "info")
 
     def export_unittest_plan(self):
         selected_cases_by_module = {}
 
-        # 整理每個模組下選中的測試案例 (保持不變)
         for py_file_path, file_cases in self.selected_cases_by_file.items():
             file_info = self.py_files[py_file_path]
             module_name = file_info['module_name']
@@ -360,20 +409,20 @@ class App(tk.Tk):
                     selected_cases_by_module[module_name]['cases'].append(case_name)
 
         if not selected_cases_by_module:
-            messagebox.showwarning("警告", "請至少選擇一個測試案例！")
+            self.show_status_message("請至少選擇一個測試案例！", "warning")
             return
 
-        # 預設保存路徑為最後載入的PY檔案資料夾
         initial_dir = self.last_py_folder if self.last_py_folder and os.path.isdir(self.last_py_folder) else None
         
         file_path = filedialog.asksaveasfilename(
             defaultextension=".py",
             filetypes=[("Python files", "*.py"), ("All files", "*.*")],
             initialfile="Unittest_plan.py",
-            initialdir=initial_dir # 設定預設保存資料夾
+            initialdir=initial_dir
         )
 
         if not file_path:
+            self.show_status_message("已取消匯出 Unittest Plan。", "info")
             return
 
         output_content = [
@@ -383,7 +432,6 @@ class App(tk.Tk):
             "\n"
         ]
 
-        # 導入所有相關的模組和類別 (保持不變)
         for mod_name, info in sorted(selected_cases_by_module.items()):
             output_content.append(f"from {mod_name} import {info['class_name']}\n")
 
@@ -394,7 +442,6 @@ class App(tk.Tk):
         output_content.append("    os.makedirs(report_dir, exist_ok=True)\n")
         output_content.append("\n")
 
-        # 為每個模組創建並執行一個獨立的測試套件 (保持不變)
         for mod_name, info in sorted(selected_cases_by_module.items()):
             class_name = info['class_name']
             output_content.append(f"    print(f\"\\n--- Running tests for {mod_name}.py ---\")\n")
@@ -418,10 +465,9 @@ class App(tk.Tk):
         try:
             with open(file_path, "w", encoding="utf-8") as f:
                 f.writelines(output_content)
-            self.export_status_label.config(text="已匯出當前Unit Plan，可點選開啟資料夾") # 顯示紅色提示
+            self.show_status_message(f"Unittest Plan 已成功匯出到 '{os.path.basename(file_path)}'，報告將生成在 'D:/SeleniumProject/test_reports'。可點選開啟PY資料夾。", "success")
         except Exception as e:
-            messagebox.showerror("錯誤", f"匯出檔案時發生錯誤: {e}")
-            self.export_status_label.config(text="") # 清除提示
+            self.show_status_message(f"匯出檔案時發生錯誤: {e}", "error")
 
     def load_testplan(self):
         excel_file_path = filedialog.askopenfilenames(
@@ -438,21 +484,26 @@ class App(tk.Tk):
                 dest_path = os.path.join(result_dir, os.path.basename(f_path))
                 try:
                     shutil.copy(f_path, dest_path)
+                    self.show_status_message(f"已成功載入 Testplan: {os.path.basename(f_path)}", "success")
                 except Exception as e:
-                    messagebox.showerror("錯誤", f"複製檔案 '{os.path.basename(f_path)}' 時發生錯誤: {e}")
-            
+                    self.show_status_message(f"複製檔案 '{os.path.basename(f_path)}' 時發生錯誤: {e}", "error")
             if not excel_file_path: 
-                messagebox.showwarning("提示", "未選擇任何 Excel Testplan 檔案。")
+                self.show_status_message("未選擇任何 Excel Testplan 檔案。", "warning") 
+        else:
+            self.show_status_message("取消載入 Excel Testplan。", "info")
 
 
     def write_results_to_excel(self):
         html_dir = filedialog.askdirectory(title="選擇包含 HTML 報告的資料夾")
         if not html_dir:
+            self.show_status_message("取消選擇 HTML 報告資料夾。", "info")
             return
+        self.last_html_report_folder = html_dir # 儲存選擇的 HTML 資料夾路徑
+        self.open_report_folder_btn.config(state=tk.NORMAL) # 啟用按鈕
 
         excel_files_in_result = [f for f in os.listdir("Result") if f.endswith((".xlsx", ".xls"))]
         if not excel_files_in_result:
-            messagebox.showwarning("警告", "Result 資料夾中沒有找到 Excel Testplan 檔案！請先載入。")
+            self.show_status_message("Result 資料夾中沒有找到 Excel Testplan 檔案！請先載入。", "warning")
             return
 
         testplan_path_in_result = os.path.join("Result", excel_files_in_result[0])
@@ -467,10 +518,10 @@ class App(tk.Tk):
             write_row = int(self.write_row_entry.get()) - 1
 
             if not read_col.isalpha() or not write_col.isalpha():
-                messagebox.showerror("錯誤", "讀取/寫入欄位必須是字母 (例如 A, B)！")
+                self.show_status_message("讀取/寫入欄位必須是字母 (例如 A, B)！", "error")
                 return
             if read_row < 0 or write_row < 0:
-                messagebox.showerror("錯誤", "讀取/寫入行數必須是正整數！")
+                self.show_status_message("讀取/寫入行數必須是正整數！", "error")
                 return
 
             read_col_idx = ord(read_col) - ord('A') 
@@ -478,53 +529,36 @@ class App(tk.Tk):
 
             html_files = [f for f in os.listdir(html_dir) if f.endswith(".html")]
             if not html_files:
-                messagebox.showwarning("警告", "選擇的資料夾中沒有找到 HTML 報告檔案。")
+                self.show_status_message("選擇的資料夾中沒有找到 HTML 報告檔案。", "warning")
                 return
 
             all_html_results = {}
-            print(f"\n--- 開始解析 HTML 報告，讀取資料夾: {html_dir} ---")
             for html_file in html_files:
                 file_path = os.path.join(html_dir, html_file)
-                print(f"正在解析檔案: {file_path}")
                 
-                # --- START: 修改的讀取 HTML 檔案部分 ---
                 content = None
-                # 嘗試不同的編碼來讀取檔案
-                encodings_to_try = ['utf-8', 'gbk', 'cp950', 'latin-1'] # 嘗試常用的編碼
+                encodings_to_try = ['utf-8', 'gbk', 'cp950', 'latin-1'] 
                 for encoding in encodings_to_try:
                     try:
                         with open(file_path, 'r', encoding=encoding) as f:
                             content = f.read()
-                        print(f"  成功以 {encoding} 編碼讀取檔案: {html_file}")
-                        break # 成功讀取後跳出迴圈
+                        break 
                     except UnicodeDecodeError:
-                        print(f"  嘗試以 {encoding} 編碼讀取失敗。")
+                        pass 
                     except Exception as e:
-                        print(f"  讀取檔案 {html_file} 時發生其他錯誤 ({encoding}): {e}")
-                        break # 其他錯誤直接跳出
+                        break 
 
                 if content is None:
-                    messagebox.showwarning("警告", f"無法成功讀取 HTML 檔案 '{html_file}'，請檢查其編碼或檔案完整性。")
-                    continue # 跳過當前檔案，處理下一個
+                    self.show_status_message(f"無法成功讀取 HTML 檔案 '{html_file}'，請檢查其編碼或檔案完整性。", "warning")
+                    continue 
                 
                 try:
                     soup = BeautifulSoup(content, 'html.parser')
                     results = self.parse_html_report(soup)
                     for item in results:
-                        print(f"    解析到結果: 測試案例 '{item['name']}', 結果 '{item['result']}'")
                         all_html_results[item['name']] = item['result'] 
                 except Exception as e:
-                    print(f"  解析 Beautiful Soup 時發生錯誤: {e}")
-                    messagebox.showwarning("警告", f"解析 HTML 檔案 '{html_file}' 內容時發生錯誤: {e}")
-                # --- END: 修改的讀取 HTML 檔案部分 ---
-
-            print("\n--- HTML 報告解析完成，所有結果字典如下 ---")
-            print(all_html_results)
-            print("-------------------------------------------\n")
-
-            print(f"--- 開始寫入 Excel 檔案: {testplan_path_in_result} ---")
-            print(f"  讀取欄位: {read_col} (索引 {read_col_idx}), 讀取起始行: {read_row + 1}")
-            print(f"  寫入欄位: {write_col} (索引 {write_col_idx}), 寫入起始行: {write_row + 1}")
+                    self.show_status_message(f"解析 HTML 檔案 '{html_file}' 內容時發生錯誤: {e}", "warning")
 
             results_written_count = 0
             for row_idx, row in enumerate(sheet.iter_rows()):
@@ -535,19 +569,10 @@ class App(tk.Tk):
                 testcase_name = str(testcase_name_cell.value).strip() if testcase_name_cell.value else ""
 
                 if testcase_name: 
-                    print(f"  Excel 中第 {row_idx + 1} 行，讀取到測試案例名稱: '{testcase_name}'")
                     if testcase_name in all_html_results:
                         result_to_write = all_html_results[testcase_name]
                         sheet.cell(row=row_idx + 1, column=write_col_idx + 1, value=result_to_write)
-                        print(f"    ▶ 將 '{testcase_name}' 的結果 '{result_to_write}' 寫入到 {get_column_letter(write_col_idx + 1)}{row_idx + 1}")
                         results_written_count += 1
-                    else:
-                        print(f"    ✗ Excel 中的 '{testcase_name}' 未在 HTML 結果中找到對應。")
-                else:
-                    print(f"  Excel 中第 {row_idx + 1} 行，讀取到的測試案例名稱為空，跳過。")
-
-
-            print(f"\n--- Excel 寫入完成，共寫入 {results_written_count} 筆結果 ---")
 
             original_filename = os.path.basename(testplan_path_in_result)
             name, ext = os.path.splitext(original_filename)
@@ -560,25 +585,22 @@ class App(tk.Tk):
             )
 
             if not save_path: 
-                messagebox.showwarning("取消", "已處理的 Excel 檔案未保存。")
+                self.show_status_message("已處理的 Excel 檔案未保存。", "warning")
                 return
 
             workbook.save(save_path)
-            messagebox.showinfo("成功", f"測試結果已成功寫入並保存到:\n{save_path}")
+            self.last_excel_save_path = save_path # 儲存保存的 Excel 路徑
+            self.show_status_message(f"測試結果已成功寫入並保存到:\n{save_path}", "success")
+            self.open_report_folder_btn.config(state=tk.NORMAL) # 啟用按鈕
 
         except Exception as e:
-            messagebox.showerror("錯誤", f"寫入結果到 Excel 時發生錯誤: {e}")
+            self.show_status_message(f"寫入結果到 Excel 時發生錯誤: {e}", "error")
 
-    # --- 修正後的 parse_html_report 方法 ---
     def parse_html_report(self, soup):
         all_test_results = []
-        # 同時查找 class 為 'hiddenRow' 或 'none' 的 <tr> 標籤
-        # HTMLTestRunner 會將通過的測試案例放在 hiddenRow，失敗或錯誤的放在 none
         for tr_tag in soup.find_all('tr', class_=['hiddenRow', 'none']):
             test_info = {}
 
-            # 找到測試案例名稱
-            # 這裡的結構是 tr_tag -> td (class='passCase' or 'failCase') -> div (class='testcase') -> a (class='popup_link')
             name_tag_container = tr_tag.find('td', class_=['passCase', 'failCase'])
             if name_tag_container:
                 name_tag = name_tag_container.find('div', class_='testcase').find('a', class_='popup_link')
@@ -589,8 +611,6 @@ class App(tk.Tk):
             else:
                 test_info['name'] = "N/A (名稱欄位未找到)"
 
-            # 找到測試結果
-            # 這裡的結構是 tr_tag -> td (align='center') -> button -> a (class='popup_link')
             result_tag_container = tr_tag.find('td', align='center')
             if result_tag_container:
                 result_link = result_tag_container.find('button').find('a', class_='popup_link')
@@ -601,11 +621,9 @@ class App(tk.Tk):
             else:
                 test_info['result'] = "N/A (結果欄位未找到)"
 
-            # 只有當 'name' 和 'result' 都被成功提取時才加入
             if test_info['name'].startswith("test_case") and test_info['result'] not in ["N/A (結果連結未找到)", "N/A (結果欄位未找到)"]:
                 all_test_results.append(test_info)
         return all_test_results
-    # --- 修正後的 parse_html_report 方法結束 ---
 
 
 if __name__ == "__main__":
