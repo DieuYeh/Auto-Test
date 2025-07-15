@@ -21,7 +21,7 @@ class App(tk.Tk):
         self.last_html_report_folder = None # 新增：用於儲存最近一次選擇的 HTML 報告資料夾
         self.last_excel_save_path = None # 新增：用於儲存最近一次保存 Excel 結果的路徑
         
-        # 狀態訊息顯示區塊 (簡化為一行)
+        # 狀態訊息顯示區塊
         self.status_label = tk.Label(self, text="準備就緒", bd=1, relief=tk.SUNKEN, anchor=tk.W, font=("Arial", 10))
         self.status_label.pack(side=tk.TOP, fill=tk.X, padx=5, pady=5)
 
@@ -47,8 +47,6 @@ class App(tk.Tk):
             color = "green"
         
         self.status_label.config(text=message, fg=color)
-        # 5秒後自動清除訊息，恢復為"準備就緒"
-        self.after(5000, lambda: self.status_label.config(text="準備就緒", fg="black"))
 
     def create_py_tab_widgets(self, parent_frame):
         # 檔案選擇區
@@ -61,6 +59,26 @@ class App(tk.Tk):
         select_files_btn = tk.Button(file_frame, text="載入 PY 檔案", command=self.load_py_files)
         select_files_btn.pack(side=tk.RIGHT)
 
+        # 選項按鈕區
+        option_frame = tk.Frame(parent_frame, padx=10, pady=5)
+        option_frame.pack(fill="x", padx=10, pady=5)
+
+        select_all_btn = tk.Button(option_frame, text="全選所有測項", command=self.select_all_test_items)
+        select_all_btn.pack(side=tk.LEFT, padx=5)
+
+        deselect_all_btn = tk.Button(option_frame, text="全取消所有測項", command=self.deselect_all_test_items)
+        deselect_all_btn.pack(side=tk.LEFT, padx=5)
+
+        self.selected_count_label = tk.Label(option_frame, text="已勾選測項: 0")
+        self.selected_count_label.pack(side=tk.LEFT, padx=10)
+        
+        # 開啟資料夾按鈕 (PY分頁)
+        self.open_py_folder_btn = tk.Button(option_frame, text="開啟PY資料夾", command=self.open_last_py_folder, state=tk.DISABLED)
+        self.open_py_folder_btn.pack(side=tk.RIGHT, padx=5)
+
+        # 匯出 Unit Plan 按鈕
+        export_btn = tk.Button(option_frame, text="匯出 Unittest Plan", command=self.export_unittest_plan)
+        export_btn.pack(side=tk.RIGHT)
         # 搜尋設定區
         search_frame = tk.LabelFrame(parent_frame, text="測項分析", padx=10, pady=10)
         search_frame.pack(fill="x", padx=10, pady=5)
@@ -87,27 +105,6 @@ class App(tk.Tk):
         self.tree.config(yscrollcommand=scrollbar.set)
 
         self.tree.bind("<ButtonRelease-1>", self.on_tree_click) 
-
-        # 選項按鈕區
-        option_frame = tk.Frame(parent_frame, padx=10, pady=5)
-        option_frame.pack(fill="x", padx=10, pady=5)
-
-        select_all_btn = tk.Button(option_frame, text="全選所有測項", command=self.select_all_test_items)
-        select_all_btn.pack(side=tk.LEFT, padx=5)
-
-        deselect_all_btn = tk.Button(option_frame, text="全取消所有測項", command=self.deselect_all_test_items)
-        deselect_all_btn.pack(side=tk.LEFT, padx=5)
-
-        self.selected_count_label = tk.Label(option_frame, text="已勾選測項: 0")
-        self.selected_count_label.pack(side=tk.LEFT, padx=10)
-        
-        # 開啟資料夾按鈕 (PY分頁)
-        self.open_py_folder_btn = tk.Button(option_frame, text="開啟PY資料夾", command=self.open_last_py_folder, state=tk.DISABLED)
-        self.open_py_folder_btn.pack(side=tk.RIGHT, padx=5)
-
-        # 匯出 Unit Plan 按鈕
-        export_btn = tk.Button(option_frame, text="匯出 Unittest Plan", command=self.export_unittest_plan)
-        export_btn.pack(side=tk.RIGHT)
         
     def open_last_py_folder(self):
         if self.last_py_folder and os.path.isdir(self.last_py_folder):
