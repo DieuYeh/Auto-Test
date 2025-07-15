@@ -329,7 +329,7 @@ class App(tk.Tk):
 
             for case_name, var in file_cases.items():
                 if var.get():
-                    selected_cases_output.append(f"    suite.addTest({module_name}.{test_class_name}('{case_name}'))\n")
+                    selected_cases_output.append(f"    suite.addTest({module_name}('{case_name}'))\n")
 
         if not selected_cases_output:
             messagebox.showwarning("警告", "請至少選擇一個測試案例！")
