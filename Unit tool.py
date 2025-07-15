@@ -16,7 +16,8 @@ class App(tk.Tk):
         self.py_files = {} 
         self.selected_cases_by_file = {} 
         self.tree_file_nodes = {} 
-
+        self.last_py_folder = None 
+        
         self.notebook = ttk.Notebook(self)
         self.notebook.pack(expand=True, fill="both", padx=10, pady=10)
 
@@ -39,13 +40,37 @@ class App(tk.Tk):
         select_files_btn = tk.Button(file_frame, text="載入 PY 檔案", command=self.load_py_files)
         select_files_btn.pack(side=tk.RIGHT)
 
-        # 搜尋設定區
+        # 搜尋設定區 (保持不變)
         search_frame = tk.LabelFrame(parent_frame, text="測項分析", padx=10, pady=10)
         search_frame.pack(fill="x", padx=10, pady=5)
 
+        # 選項按鈕區
+        option_frame = tk.Frame(parent_frame, padx=10, pady=5)
+        option_frame.pack(fill="x", padx=10, pady=5)
+
+        select_all_btn = tk.Button(option_frame, text="全選所有測項", command=self.select_all_test_items)
+        select_all_btn.pack(side=tk.LEFT, padx=5)
+
+        deselect_all_btn = tk.Button(option_frame, text="全取消所有測項", command=self.deselect_all_test_items)
+        deselect_all_btn.pack(side=tk.LEFT, padx=5)
+
+        self.selected_count_label = tk.Label(option_frame, text="已勾選測項: 0")
+        self.selected_count_label.pack(side=tk.LEFT, padx=10)
+        
+        # 開啟資料夾按鈕
+        self.open_folder_btn = tk.Button(option_frame, text="開啟資料夾", command=self.open_last_py_folder, state=tk.DISABLED)
+        self.open_folder_btn.pack(side=tk.RIGHT, padx=5)
+
+        # 匯出Unit plan
+        export_btn = tk.Button(option_frame, text="匯出 Unittest Plan", command=self.export_unittest_plan)
+        export_btn.pack(side=tk.RIGHT)
+
+        # 匯出狀態提示文字
+        self.export_status_label = tk.Label(option_frame, text="", fg="red")
+        self.export_status_label.pack(side=tk.RIGHT, padx=5)
         tk.Label(search_frame, text="備註: 將會分析PY內所含 \"test_case\"的測項，請符合名稱設計。", fg="blue").pack(side=tk.LEFT, padx=5)
 
-        # 結果顯示區 (Treeview)
+        # 結果顯示區 (Treeview) (保持不變)
         result_frame = tk.LabelFrame(parent_frame, text="測項選擇結果", padx=10, pady=10)
         result_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
@@ -67,21 +92,21 @@ class App(tk.Tk):
 
         self.tree.bind("<ButtonRelease-1>", self.on_tree_click) 
 
-        # 選項按鈕區
-        option_frame = tk.Frame(parent_frame, padx=10, pady=5)
-        option_frame.pack(fill="x", padx=10, pady=5)
 
-        select_all_btn = tk.Button(option_frame, text="全選所有測項", command=self.select_all_test_items)
-        select_all_btn.pack(side=tk.LEFT, padx=5)
-
-        deselect_all_btn = tk.Button(option_frame, text="全取消所有測項", command=self.deselect_all_test_items)
-        deselect_all_btn.pack(side=tk.LEFT, padx=5)
-
-        self.selected_count_label = tk.Label(option_frame, text="已勾選測項: 0")
-        self.selected_count_label.pack(side=tk.LEFT, padx=10)
-
-        export_btn = tk.Button(option_frame, text="匯出 Unittest Plan", command=self.export_unittest_plan)
-        export_btn.pack(side=tk.RIGHT)
+    def open_last_py_folder(self):
+        if self.last_py_folder and os.path.isdir(self.last_py_folder):
+            try:
+                # 針對不同作業系統使用不同的開啟指令
+                if os.sys.platform == "win32":
+                    os.startfile(self.last_py_folder)
+                elif os.sys.platform == "darwin": # macOS
+                    subprocess.Popen(["open", self.last_py_folder])
+                else: # Linux
+                    subprocess.Popen(["xdg-open", self.last_py_folder])
+            except Exception as e:
+                messagebox.showerror("錯誤", f"無法開啟資料夾: {e}")
+        else:
+            messagebox.showwarning("警告", "沒有可開啟的資料夾路徑。請先載入 PY 檔案。")
 
     def create_excel_tab_widgets(self, parent_frame):
         excel_settings_frame = tk.LabelFrame(parent_frame, text="Excel 設定", padx=10, pady=10)
@@ -116,6 +141,8 @@ class App(tk.Tk):
         file_paths = filedialog.askopenfilenames(filetypes=[("Python files", "*.py")])
         if file_paths:
             self.py_files.clear() 
+            self.last_py_folder = os.path.dirname(file_paths[0]) # 儲存第一個PY檔案的資料夾路徑
+            
             for file_path in file_paths:
                 module_name = os.path.splitext(os.path.basename(file_path))[0]
                 self.py_files[file_path] = {'module_name': module_name, 'test_class_name': None}
@@ -124,8 +151,12 @@ class App(tk.Tk):
                 displayed_names = ", ".join([os.path.basename(path) for path in self.py_files.keys()])
                 self.file_list_label.config(text=f"已選擇: {displayed_names}")
                 self.analyze_all_py_files() 
+                self.open_folder_btn.config(state=tk.NORMAL) # 啟用按鈕
+                self.export_status_label.config(text="") # 清除匯出狀態提示
             else:
                 self.file_list_label.config(text="未載入任何 PY 檔案")
+                self.open_folder_btn.config(state=tk.DISABLED) # 禁用按鈕
+                self.export_status_label.config(text="") # 清除匯出狀態提示
 
 
     def analyze_all_py_files(self):
@@ -314,64 +345,83 @@ class App(tk.Tk):
         self.update_selected_count_label()
 
     def export_unittest_plan(self):
-        selected_cases_output = []
-        imported_module_classes = {} 
+        selected_cases_by_module = {}
 
+        # 整理每個模組下選中的測試案例 (保持不變)
         for py_file_path, file_cases in self.selected_cases_by_file.items():
             file_info = self.py_files[py_file_path]
             module_name = file_info['module_name']
-            test_class_name = file_info['test_class_name'] 
-
-            if not test_class_name:
-                test_class_name = "MyTestCase" 
-            
-            imported_module_classes[module_name] = test_class_name 
+            test_class_name = file_info['test_class_name'] if file_info['test_class_name'] else "MyTestCase"
 
             for case_name, var in file_cases.items():
                 if var.get():
-                    selected_cases_output.append(f"    suite.addTest({module_name}('{case_name}'))\n")
+                    if module_name not in selected_cases_by_module:
+                        selected_cases_by_module[module_name] = {'class_name': test_class_name, 'cases': []}
+                    selected_cases_by_module[module_name]['cases'].append(case_name)
 
-        if not selected_cases_output:
+        if not selected_cases_by_module:
             messagebox.showwarning("警告", "請至少選擇一個測試案例！")
             return
 
+        # 預設保存路徑為最後載入的PY檔案資料夾
+        initial_dir = self.last_py_folder if self.last_py_folder and os.path.isdir(self.last_py_folder) else None
+        
         file_path = filedialog.asksaveasfilename(
             defaultextension=".py",
             filetypes=[("Python files", "*.py"), ("All files", "*.*")],
-            initialfile="Unittest_plan.py" 
+            initialfile="Unittest_plan.py",
+            initialdir=initial_dir # 設定預設保存資料夾
         )
 
-        if not file_path: 
+        if not file_path:
             return
 
         output_content = [
             "import unittest\n",
-        ]
-        for mod_name, class_name in sorted(imported_module_classes.items()):
-            output_content.append(f"from {mod_name} import {class_name}\n")
-        
-        output_content.extend([
             "import HTMLTestRunner # type: ignore\n",
-            " \n",
-            "if __name__ == '__main__':\n",
-            "    suite = unittest.TestSuite()\n"
-        ])
+            "import os\n",
+            "\n"
+        ]
 
-        output_content.extend(selected_cases_output)
+        # 導入所有相關的模組和類別 (保持不變)
+        for mod_name, info in sorted(selected_cases_by_module.items()):
+            output_content.append(f"from {mod_name} import {info['class_name']}\n")
 
-        output_content.extend([
-            "    runner = HTMLTestRunner.HTMLTestRunner(\n",
-            "        output='D:/SeleniumProject/test_reports'\n", 
-            "    )\n",
-            "    runner.run(suite)\n"
-        ])
+        output_content.append("\n")
+        output_content.append("if __name__ == '__main__':\n")
+        output_content.append("    # 確保測試報告目錄存在\n")
+        output_content.append("    report_dir = 'D:/SeleniumProject/test_reports'\n")
+        output_content.append("    os.makedirs(report_dir, exist_ok=True)\n")
+        output_content.append("\n")
+
+        # 為每個模組創建並執行一個獨立的測試套件 (保持不變)
+        for mod_name, info in sorted(selected_cases_by_module.items()):
+            class_name = info['class_name']
+            output_content.append(f"    print(f\"\\n--- Running tests for {mod_name}.py ---\")\n")
+            output_content.append(f"    suite_{mod_name} = unittest.TestSuite()\n")
+            for case_name in info['cases']:
+                output_content.append(f"    suite_{mod_name}.addTest({class_name}('{case_name}'))\n")
+            
+            output_content.append(f"    report_file_{mod_name} = os.path.join(report_dir, f'Report_{mod_name}.html')\n")
+            output_content.append(f"    with open(report_file_{mod_name}, 'wb') as f:\n")
+            output_content.append(f"        runner_{mod_name} = HTMLTestRunner.HTMLTestRunner(\n")
+            output_content.append("            stream=f,\n")
+            output_content.append(f"            title='{mod_name} Test Report',\n")
+            output_content.append("            description='Individual test report for {mod_name}.py'\n")
+            output_content.append("        )\n")
+            output_content.append(f"        runner_{mod_name}.run(suite_{mod_name})\n")
+            output_content.append(f"    print(f\"Test report for {mod_name}.py saved to {{report_file_{mod_name}}}\")\n")
+            output_content.append("\n")
+        
+        output_content.append("    print(\"\\n--- All selected test suites have been executed and reported. ---\")\n")
 
         try:
             with open(file_path, "w", encoding="utf-8") as f:
                 f.writelines(output_content)
-
+            self.export_status_label.config(text="已匯出當前Unit Plan，可點選開啟資料夾") # 顯示紅色提示
         except Exception as e:
             messagebox.showerror("錯誤", f"匯出檔案時發生錯誤: {e}")
+            self.export_status_label.config(text="") # 清除提示
 
     def load_testplan(self):
         excel_file_path = filedialog.askopenfilenames(
@@ -436,16 +486,37 @@ class App(tk.Tk):
             for html_file in html_files:
                 file_path = os.path.join(html_dir, html_file)
                 print(f"正在解析檔案: {file_path}")
+                
+                # --- START: 修改的讀取 HTML 檔案部分 ---
+                content = None
+                # 嘗試不同的編碼來讀取檔案
+                encodings_to_try = ['utf-8', 'gbk', 'cp950', 'latin-1'] # 嘗試常用的編碼
+                for encoding in encodings_to_try:
+                    try:
+                        with open(file_path, 'r', encoding=encoding) as f:
+                            content = f.read()
+                        print(f"  成功以 {encoding} 編碼讀取檔案: {html_file}")
+                        break # 成功讀取後跳出迴圈
+                    except UnicodeDecodeError:
+                        print(f"  嘗試以 {encoding} 編碼讀取失敗。")
+                    except Exception as e:
+                        print(f"  讀取檔案 {html_file} 時發生其他錯誤 ({encoding}): {e}")
+                        break # 其他錯誤直接跳出
+
+                if content is None:
+                    messagebox.showwarning("警告", f"無法成功讀取 HTML 檔案 '{html_file}'，請檢查其編碼或檔案完整性。")
+                    continue # 跳過當前檔案，處理下一個
+                
                 try:
-                    with open(file_path, 'r', encoding='utf-8') as f:
-                        soup = BeautifulSoup(f, 'html.parser')
-                        results = self.parse_html_report(soup)
-                        for item in results:
-                            print(f"  解析到結果: 測試案例 '{item['name']}', 結果 '{item['result']}'")
-                            all_html_results[item['name']] = item['result'] 
+                    soup = BeautifulSoup(content, 'html.parser')
+                    results = self.parse_html_report(soup)
+                    for item in results:
+                        print(f"    解析到結果: 測試案例 '{item['name']}', 結果 '{item['result']}'")
+                        all_html_results[item['name']] = item['result'] 
                 except Exception as e:
-                    print(f"  解析檔案 {html_file} 時發生錯誤: {e}")
-                    messagebox.showwarning("警告", f"解析 HTML 檔案 '{html_file}' 時發生錯誤: {e}")
+                    print(f"  解析 Beautiful Soup 時發生錯誤: {e}")
+                    messagebox.showwarning("警告", f"解析 HTML 檔案 '{html_file}' 內容時發生錯誤: {e}")
+                # --- END: 修改的讀取 HTML 檔案部分 ---
 
             print("\n--- HTML 報告解析完成，所有結果字典如下 ---")
             print(all_html_results)
@@ -493,6 +564,7 @@ class App(tk.Tk):
                 return
 
             workbook.save(save_path)
+            messagebox.showinfo("成功", f"測試結果已成功寫入並保存到:\n{save_path}")
 
         except Exception as e:
             messagebox.showerror("錯誤", f"寫入結果到 Excel 時發生錯誤: {e}")
