@@ -22,7 +22,6 @@ class App(tk.Tk):
 
         self.py_tab = ttk.Frame(self.notebook)
         self.notebook.add(self.py_tab, text="PY 檔案處理")
-        # create_py_tab_widgets 會處理 self.tree 的創建
         self.create_py_tab_widgets(self.py_tab)
 
         self.excel_tab = ttk.Frame(self.notebook)
@@ -50,7 +49,6 @@ class App(tk.Tk):
         result_frame = tk.LabelFrame(parent_frame, text="測項選擇結果", padx=10, pady=10)
         result_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
-        # --- 修正後的程式碼：在這裡初始化 self.tree ---
         self.tree = ttk.Treeview(result_frame, columns=("No.", "Item Name", "Select"), show="headings")
         self.tree.heading("No.", text="No.", anchor=tk.CENTER)
         self.tree.heading("Item Name", text="項目名稱", anchor=tk.W)
@@ -60,12 +58,9 @@ class App(tk.Tk):
         self.tree.column("Item Name", width=400, anchor=tk.W)
         self.tree.column("Select", width=70, anchor=tk.CENTER)
 
-        # 設定 Treeview 標籤顏色，現在 self.tree 已經被建立
         self.tree.tag_configure("file_node", background="#D3D3D3", foreground="blue", font=("", 9, "bold"))
 
         self.tree.pack(side=tk.LEFT, fill="both", expand=True)
-        # --- 結束修正 ---
-
         scrollbar = ttk.Scrollbar(result_frame, orient="vertical", command=self.tree.yview)
         scrollbar.pack(side=tk.RIGHT, fill="y")
         self.tree.config(yscrollcommand=scrollbar.set)
@@ -190,11 +185,10 @@ class App(tk.Tk):
                 
                 if file_cases_count == 0:
                     current_values = list(self.tree.item(file_node_id, "values"))
-                    # 判斷是否已經有 Class 名稱在顯示中
                     if "(Class:" in current_values[1]:
-                        current_values[1] = current_values[1].replace(")", ", 無測項)") # 如果有 Class 名稱，則在後面補上無測項
+                        current_values[1] = current_values[1].replace(")", ", 無測項)") 
                     else:
-                        current_values[1] = f"{os.path.basename(py_file_path)} (無測項)" # 如果沒有，就直接顯示無測項
+                        current_values[1] = f"{os.path.basename(py_file_path)} (無測項)" 
                     self.tree.item(file_node_id, values=current_values)
 
             except Exception as e:
@@ -253,7 +247,7 @@ class App(tk.Tk):
                 if not parent_id: return 
 
                 py_file_path = parent_id
-                case_name = self.tree.item(item_id, "values")[1] 
+                case_name = item_id.split('-', 1)[1] 
 
                 if py_file_path in self.selected_cases_by_file and \
                    case_name in self.selected_cases_by_file[py_file_path]:
@@ -277,9 +271,6 @@ class App(tk.Tk):
         
         if not file_cases: 
             current_values = list(self.tree.item(file_node_id, "values"))
-            # 保持原有的顯示文字，可能是 "檔案名 (Class: Xxx)" 或 "檔案名 (無測項)"
-            # current_values[1] = current_values[1] 
-            
             current_values[2] = "☐" 
             self.tree.item(file_node_id, values=current_values)
             return
@@ -302,7 +293,7 @@ class App(tk.Tk):
         count = 0
         for file_cases in self.selected_cases_by_file.values():
             count += sum(1 for var in file_cases.values() if var.get())
-        self.selected_count_label.config(text=f"已勾選測項: {count}")
+        self.selected_count_label.config(text=f"已勾選測項: {count}") 
 
     def select_all_test_items(self):
         for py_file_path, file_cases in self.selected_cases_by_file.items():
@@ -338,7 +329,7 @@ class App(tk.Tk):
 
             for case_name, var in file_cases.items():
                 if var.get():
-                    selected_cases_output.append(f"    suite.addTest({module_name}('{case_name}'))\n")
+                    selected_cases_output.append(f"    suite.addTest({module_name}.{test_class_name}('{case_name}'))\n")
 
         if not selected_cases_output:
             messagebox.showwarning("警告", "請至少選擇一個測試案例！")
@@ -356,8 +347,7 @@ class App(tk.Tk):
         output_content = [
             "import unittest\n",
         ]
-        for mod_name in sorted(imported_module_classes.keys()):
-            class_name = imported_module_classes[mod_name]
+        for mod_name, class_name in sorted(imported_module_classes.items()):
             output_content.append(f"from {mod_name} import {class_name}\n")
         
         output_content.extend([
@@ -379,11 +369,17 @@ class App(tk.Tk):
         try:
             with open(file_path, "w", encoding="utf-8") as f:
                 f.writelines(output_content)
+
         except Exception as e:
             messagebox.showerror("錯誤", f"匯出檔案時發生錯誤: {e}")
 
     def load_testplan(self):
-        excel_file_path = filedialog.askopenfilenames(filetypes=[("Excel files", "*.xlsx", "*.xls")])
+        excel_file_path = filedialog.askopenfilenames(
+            filetypes=[
+                ("Excel files (XLSX)", "*.xlsx"), 
+                ("Excel files (XLS)", "*.xls")
+            ]
+        )
         if excel_file_path:
             result_dir = "Result"
             os.makedirs(result_dir, exist_ok=True) 
@@ -394,6 +390,10 @@ class App(tk.Tk):
                     shutil.copy(f_path, dest_path)
                 except Exception as e:
                     messagebox.showerror("錯誤", f"複製檔案 '{os.path.basename(f_path)}' 時發生錯誤: {e}")
+            
+            if not excel_file_path: 
+                messagebox.showwarning("提示", "未選擇任何 Excel Testplan 檔案。")
+
 
     def write_results_to_excel(self):
         html_dir = filedialog.askdirectory(title="選擇包含 HTML 報告的資料夾")
@@ -432,14 +432,30 @@ class App(tk.Tk):
                 return
 
             all_html_results = {}
+            print(f"\n--- 開始解析 HTML 報告，讀取資料夾: {html_dir} ---")
             for html_file in html_files:
                 file_path = os.path.join(html_dir, html_file)
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    soup = BeautifulSoup(f, 'html.parser')
-                    results = self.parse_html_report(soup)
-                    for item in results:
-                        all_html_results[item['name']] = item['result'] 
+                print(f"正在解析檔案: {file_path}")
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        soup = BeautifulSoup(f, 'html.parser')
+                        results = self.parse_html_report(soup)
+                        for item in results:
+                            print(f"  解析到結果: 測試案例 '{item['name']}', 結果 '{item['result']}'")
+                            all_html_results[item['name']] = item['result'] 
+                except Exception as e:
+                    print(f"  解析檔案 {html_file} 時發生錯誤: {e}")
+                    messagebox.showwarning("警告", f"解析 HTML 檔案 '{html_file}' 時發生錯誤: {e}")
 
+            print("\n--- HTML 報告解析完成，所有結果字典如下 ---")
+            print(all_html_results)
+            print("-------------------------------------------\n")
+
+            print(f"--- 開始寫入 Excel 檔案: {testplan_path_in_result} ---")
+            print(f"  讀取欄位: {read_col} (索引 {read_col_idx}), 讀取起始行: {read_row + 1}")
+            print(f"  寫入欄位: {write_col} (索引 {write_col_idx}), 寫入起始行: {write_row + 1}")
+
+            results_written_count = 0
             for row_idx, row in enumerate(sheet.iter_rows()):
                 if row_idx < read_row: 
                     continue
@@ -447,10 +463,20 @@ class App(tk.Tk):
                 testcase_name_cell = sheet.cell(row=row_idx + 1, column=read_col_idx + 1) 
                 testcase_name = str(testcase_name_cell.value).strip() if testcase_name_cell.value else ""
 
-                if testcase_name in all_html_results:
-                    result_to_write = all_html_results[testcase_name]
-                    sheet.cell(row=row_idx + 1, column=write_col_idx + 1, value=result_to_write)
-                    print(f"將 {testcase_name} 的結果 '{result_to_write}' 寫入到 {get_column_letter(write_col_idx + 1)}{row_idx + 1}")
+                if testcase_name: 
+                    print(f"  Excel 中第 {row_idx + 1} 行，讀取到測試案例名稱: '{testcase_name}'")
+                    if testcase_name in all_html_results:
+                        result_to_write = all_html_results[testcase_name]
+                        sheet.cell(row=row_idx + 1, column=write_col_idx + 1, value=result_to_write)
+                        print(f"    ▶ 將 '{testcase_name}' 的結果 '{result_to_write}' 寫入到 {get_column_letter(write_col_idx + 1)}{row_idx + 1}")
+                        results_written_count += 1
+                    else:
+                        print(f"    ✗ Excel 中的 '{testcase_name}' 未在 HTML 結果中找到對應。")
+                else:
+                    print(f"  Excel 中第 {row_idx + 1} 行，讀取到的測試案例名稱為空，跳過。")
+
+
+            print(f"\n--- Excel 寫入完成，共寫入 {results_written_count} 筆結果 ---")
 
             original_filename = os.path.basename(testplan_path_in_result)
             name, ext = os.path.splitext(original_filename)
@@ -471,21 +497,31 @@ class App(tk.Tk):
         except Exception as e:
             messagebox.showerror("錯誤", f"寫入結果到 Excel 時發生錯誤: {e}")
 
-
+    # --- 修正後的 parse_html_report 方法 ---
     def parse_html_report(self, soup):
         all_test_results = []
-        for tr_tag in soup.find_all('tr', class_='hiddenRow'):
+        # 同時查找 class 為 'hiddenRow' 或 'none' 的 <tr> 標籤
+        # HTMLTestRunner 會將通過的測試案例放在 hiddenRow，失敗或錯誤的放在 none
+        for tr_tag in soup.find_all('tr', class_=['hiddenRow', 'none']):
             test_info = {}
 
-            name_tag = tr_tag.find('div', class_='testcase').find('a', class_='popup_link')
-            if name_tag:
-                test_info['name'] = name_tag.get_text(strip=True)
+            # 找到測試案例名稱
+            # 這裡的結構是 tr_tag -> td (class='passCase' or 'failCase') -> div (class='testcase') -> a (class='popup_link')
+            name_tag_container = tr_tag.find('td', class_=['passCase', 'failCase'])
+            if name_tag_container:
+                name_tag = name_tag_container.find('div', class_='testcase').find('a', class_='popup_link')
+                if name_tag:
+                    test_info['name'] = name_tag.get_text(strip=True)
+                else:
+                    test_info['name'] = "N/A (名稱連結未找到)"
             else:
-                test_info['name'] = "N/A (名稱未找到)"
+                test_info['name'] = "N/A (名稱欄位未找到)"
 
-            result_tag = tr_tag.find('td', align='center')
-            if result_tag:
-                result_link = result_tag.find('button').find('a', class_='popup_link')
+            # 找到測試結果
+            # 這裡的結構是 tr_tag -> td (align='center') -> button -> a (class='popup_link')
+            result_tag_container = tr_tag.find('td', align='center')
+            if result_tag_container:
+                result_link = result_tag_container.find('button').find('a', class_='popup_link')
                 if result_link:
                     test_info['result'] = result_link.get_text(strip=True)
                 else:
@@ -493,8 +529,12 @@ class App(tk.Tk):
             else:
                 test_info['result'] = "N/A (結果欄位未找到)"
 
-            all_test_results.append(test_info)
+            # 只有當 'name' 和 'result' 都被成功提取時才加入
+            if test_info['name'].startswith("test_case") and test_info['result'] not in ["N/A (結果連結未找到)", "N/A (結果欄位未找到)"]:
+                all_test_results.append(test_info)
         return all_test_results
+    # --- 修正後的 parse_html_report 方法結束 ---
+
 
 if __name__ == "__main__":
     app = App()
