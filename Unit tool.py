@@ -42,17 +42,15 @@ class App(tk.Tk):
         select_file_btn = tk.Button(file_frame, text="載入 PY 檔案", command=self.load_py_file)
         select_file_btn.pack(side=tk.RIGHT)
 
-        # 搜尋設定區
+        # 搜尋設定區 - 已修改
         search_frame = tk.LabelFrame(parent_frame, text="搜尋設定", padx=10, pady=10)
         search_frame.pack(fill="x", padx=10, pady=5)
 
-        tk.Label(search_frame, text="搜尋關鍵字 (預設: def):").pack(side=tk.LEFT)
-        self.keyword_entry = tk.Entry(search_frame, width=20)
-        self.keyword_entry.insert(0, "def") # 設定預設值
-        self.keyword_entry.pack(side=tk.LEFT, padx=5)
+        # 替換掉原來的 Label 和 Entry
+        tk.Label(search_frame, text="備註: 將會分析PY內所含 \"test_case\"的測項，請符合名稱設計。", fg="blue").pack(side=tk.LEFT, padx=5)
 
-        search_btn = tk.Button(search_frame, text="搜尋", command=self.search_py_file)
-        search_btn.pack(side=tk.LEFT)
+        search_btn = tk.Button(search_frame, text="重新搜尋", command=self.search_py_file) # 按鈕文字也略作修改
+        search_btn.pack(side=tk.RIGHT)
 
         # 結果顯示區 (Treeview)
         result_frame = tk.LabelFrame(parent_frame, text="搜尋結果", padx=10, pady=10)
@@ -131,18 +129,12 @@ class App(tk.Tk):
         if file_path:
             self.py_file_path = file_path
             self.file_label.config(text=f"已選擇: {os.path.basename(file_path)}")
-            messagebox.showinfo("成功", "PY 檔案載入成功！")
             self.search_py_file() # 載入後自動搜尋
 
     def search_py_file(self):
-        """讀取 PY 檔案內容，搜尋關鍵字並更新 Treeview"""
+        """讀取 PY 檔案內容，搜尋固定模式並更新 Treeview"""
         if not self.py_file_path:
             messagebox.showwarning("警告", "請先載入 PY 檔案！")
-            return
-
-        keyword = self.keyword_entry.get().strip()
-        if not keyword:
-            messagebox.showwarning("警告", "請輸入搜尋關鍵字！")
             return
 
         self.all_found_cases = []
@@ -153,24 +145,21 @@ class App(tk.Tk):
             with open(self.py_file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
 
-            # 使用正則表達式尋找 def XXXX(cls) 模式並擷取 XXXX
-            # 這個正則表達式會匹配 'def ' 後面跟著一個或多個非空白字元，直到遇到 '('
-            # 並確保後面可能有 (cls) 或其他參數
-            pattern = re.compile(rf'{re.escape(keyword)}\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\([^)]*\):')
+            # 固定正則表達式，用於匹配 'def test_caseXXXX(self):' 並擷取 'test_caseXXXX'
+            pattern = re.compile(r'def\s+(test_case[a-zA-Z0-9_]+)\s*\(self\):') 
             matches = pattern.finditer(content)
 
             no = 1
             for match in matches:
-                case_name = match.group(1) # 擷取 XXXX
-                # 檢查是否已存在，避免重複加入 (如果檔案中有重複定義)
-                if case_name not in [item[1] for item in self.all_found_cases]:
-                    self.all_found_cases.append(case_name)
+                case_name = match.group(1) # 擷取 'test_case01_WelcomePage'
+                # 檢查是否已存在，避免重複加入
+                if case_name not in [item[1] for item in self.tree.get_children()]: 
                     var = tk.BooleanVar(value=False) # 預設為不選中
                     self.selected_cases[case_name] = var
                     self.tree.insert("", "end", iid=case_name, values=(no, case_name, "☐"), tags=("checkbox",))
+                    self.all_found_cases.append(case_name) # 將其加入到 all_found_cases 列表
                     no += 1
             self.update_selected_count()
-            messagebox.showinfo("搜尋完成", f"找到 {len(self.all_found_cases)} 個符合 '{keyword}' 的項目。")
 
         except Exception as e:
             messagebox.showerror("錯誤", f"讀取或搜尋檔案時發生錯誤: {e}")
@@ -183,7 +172,7 @@ class App(tk.Tk):
 
         column = self.tree.identify_column(event.x)
         if column == "#3": # 選擇欄位
-            case_name = self.tree.item(item_id, "values")[1] # 取得 Case name
+            case_name = self.tree.item(item_id, "values")[1] 
             if case_name in self.selected_cases:
                 current_var = self.selected_cases[case_name]
                 current_var.set(not current_var.get()) # 切換布林值
@@ -203,16 +192,20 @@ class App(tk.Tk):
 
     def select_all_cases(self):
         """全選所有搜尋到的測試案例"""
-        for case_name, var in self.selected_cases.items():
-            var.set(True)
-            self.update_checkbox_display(case_name, True)
+        for case_name in self.all_found_cases: 
+            var = self.selected_cases.get(case_name)
+            if var: 
+                var.set(True)
+                self.update_checkbox_display(case_name, True)
         self.update_selected_count()
 
     def deselect_all_cases(self):
         """全取消選所有搜尋到的測試案例"""
-        for case_name, var in self.selected_cases.items():
-            var.set(False)
-            self.update_checkbox_display(case_name, False)
+        for case_name in self.all_found_cases: 
+            var = self.selected_cases.get(case_name)
+            if var: 
+                var.set(False)
+                self.update_checkbox_display(case_name, False)
         self.update_selected_count()
 
     def export_unittest_plan(self):
@@ -225,53 +218,60 @@ class App(tk.Tk):
             messagebox.showwarning("警告", "請至少選擇一個測試案例！")
             return
 
+        if not self.py_file_path:
+            messagebox.showwarning("警告", "請先載入 PY 檔案，才能決定匯入模組名稱！")
+            return
+            
+        # 根據載入的 PY 檔案名稱決定模組名稱
+        module_name = os.path.splitext(os.path.basename(self.py_file_path))[0] 
+
         # 彈出檔案儲存對話框
         file_path = filedialog.asksaveasfilename(
             defaultextension=".py",
             filetypes=[("Python files", "*.py"), ("All files", "*.*")],
-            initialfile="Unittest_plan.py" # 預設檔名
+            initialfile="Unittest_plan.py" 
         )
 
-        if not file_path: # 如果使用者取消了儲存對話框
+        if not file_path: 
             return
 
+        # 構建新的檔案內容
         output_content = [
             "import unittest\n",
-            "class MathTest(unittest.TestCase):\n", # 假設這裡有一個 MathTest 類別，你可能需要根據實際情況修改
-            "    # 這個類別應該在你的測試文件中定義\n\n",
+            f"from {module_name} import MyTestCase # {module_name} 會根據你匯入的PY來命名\n",
+            "import HTMLTestRunner # type: ignore\n",
+            " \n",
             "if __name__ == '__main__':\n",
             "    suite = unittest.TestSuite()\n"
         ]
 
         for case_name in selected_cases_list:
-            # 這裡假設你的測試案例都是 MathTest 類別的方法
-            # 如果你的實際情況不同，請修改 'MathTest'
-            output_content.append(f"    suite.addTest(MathTest('{case_name}'))\n")
+            output_content.append(f"    suite.addTest(MyTestCase('{case_name}'))\n")
 
         output_content.extend([
-            "    runner = unittest.TextTestRunner()\n",
+            "    runner = HTMLTestRunner.HTMLTestRunner(\n",
+            "        output='D:/SeleniumProject/test_reports'\n", 
+            "    )\n",
             "    runner.run(suite)\n"
         ])
 
         try:
             with open(file_path, "w", encoding="utf-8") as f:
                 f.writelines(output_content)
-            messagebox.showinfo("匯出成功", f"Unittest Plan 已成功匯出到:\n{file_path}")
         except Exception as e:
             messagebox.showerror("錯誤", f"匯出檔案時發生錯誤: {e}")
 
     # --- Excel 報告處理相關方法 ---
     def load_testplan(self):
         """載入 Testplan (Excel)，並儲存到 Result 資料夾"""
-        excel_file_path = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx *.xls")])
+        excel_file_path = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx", "*.xls")])
         if excel_file_path:
             result_dir = "Result"
-            os.makedirs(result_dir, exist_ok=True) # 確保 Result 資料夾存在
+            os.makedirs(result_dir, exist_ok=True) 
 
             dest_path = os.path.join(result_dir, os.path.basename(excel_file_path))
             try:
                 shutil.copy(excel_file_path, dest_path)
-                messagebox.showinfo("成功", f"Testplan '{os.path.basename(excel_file_path)}' 已成功載入並保存到 Result 資料夾！")
             except Exception as e:
                 messagebox.showerror("錯誤", f"複製檔案時發生錯誤: {e}")
 
@@ -287,17 +287,16 @@ class App(tk.Tk):
             return
 
         # 簡單地選擇 Result 資料夾中的第一個 Excel 檔案作為 Testplan
-        # 你可以根據需要修改此邏輯，例如讓使用者選擇哪個 Testplan
         testplan_path_in_result = os.path.join("Result", excel_files_in_result[0])
 
         try:
             # 讀取 Excel Testplan
             workbook = load_workbook(testplan_path_in_result)
-            sheet = workbook.active # 預設使用活動工作表
+            sheet = workbook.active 
 
             # 獲取讀取和寫入的行列資訊
             read_col = self.read_col_entry.get().upper()
-            read_row = int(self.read_row_entry.get()) - 1 # openpyxl 索引從 0 開始
+            read_row = int(self.read_row_entry.get()) - 1 
             write_col = self.write_col_entry.get().upper()
             write_row = int(self.write_row_entry.get()) - 1
 
@@ -308,7 +307,7 @@ class App(tk.Tk):
                 messagebox.showerror("錯誤", "讀取/寫入行數必須是正整數！")
                 return
 
-            read_col_idx = ord(read_col) - ord('A') # 將列字母轉換為 0-based 索引
+            read_col_idx = ord(read_col) - ord('A') 
             write_col_idx = ord(write_col) - ord('A')
 
             # 讀取所有 HTML 報告
@@ -324,15 +323,15 @@ class App(tk.Tk):
                     soup = BeautifulSoup(f, 'html.parser')
                     results = self.parse_html_report(soup)
                     for item in results:
-                        all_html_results[item['name']] = item['result'] # 儲存所有 HTML 報告的結果
+                        all_html_results[item['name']] = item['result'] 
 
             # 比對並寫入 Excel
             for row_idx, row in enumerate(sheet.iter_rows()):
-                if row_idx < read_row: # 跳過設定的讀取起始行之前的行
+                if row_idx < read_row: 
                     continue
 
                 # 讀取 Testcase name
-                testcase_name_cell = sheet.cell(row=row_idx + 1, column=read_col_idx + 1) # Excel cell 是 1-based
+                testcase_name_cell = sheet.cell(row=row_idx + 1, column=read_col_idx + 1) 
                 testcase_name = str(testcase_name_cell.value).strip() if testcase_name_cell.value else ""
 
                 if testcase_name in all_html_results:
@@ -341,8 +340,7 @@ class App(tk.Tk):
                     sheet.cell(row=row_idx + 1, column=write_col_idx + 1, value=result_to_write)
                     print(f"將 {testcase_name} 的結果 '{result_to_write}' 寫入到 {get_column_letter(write_col_idx + 1)}{row_idx + 1}")
 
-            # --- 新增的檔案儲存對話框 ---
-            # 建議的預設檔名，例如在原檔名後加上 "_updated" 或 "_results"
+            # 建議的預設檔名
             original_filename = os.path.basename(testplan_path_in_result)
             name, ext = os.path.splitext(original_filename)
             default_save_filename = f"{name}_results{ext}"
@@ -353,12 +351,11 @@ class App(tk.Tk):
                 initialfile=default_save_filename
             )
 
-            if not save_path: # 如果使用者取消了儲存
+            if not save_path: 
                 messagebox.showwarning("取消", "已處理的 Excel 檔案未保存。")
                 return
 
             workbook.save(save_path)
-            messagebox.showinfo("成功", f"結果已成功寫入 Excel 並保存到:\n{save_path}")
 
         except Exception as e:
             messagebox.showerror("錯誤", f"寫入結果到 Excel 時發生錯誤: {e}")
