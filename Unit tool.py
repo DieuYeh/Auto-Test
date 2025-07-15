@@ -29,9 +29,6 @@ class App(tk.Tk):
         self.notebook.add(self.excel_tab, text="Excel 報告處理")
         self.create_excel_tab_widgets(self.excel_tab)
 
-        # 這裡不再需要 self.tree 的初始化，因為它會在 create_py_tab_widgets 裡面被建立
-        # self.tree.tag_configure("file_node", background="#D3D3D3", foreground="blue", font=("", 9, "bold")) # 這行也要移到 create_py_tab_widgets 裡
-
     def create_py_tab_widgets(self, parent_frame):
         # 檔案選擇區
         file_frame = tk.LabelFrame(parent_frame, text="PY 檔案載入", padx=10, pady=10)
@@ -40,7 +37,7 @@ class App(tk.Tk):
         self.file_list_label = tk.Label(file_frame, text="未載入任何 PY 檔案")
         self.file_list_label.pack(side=tk.LEFT, expand=True, fill="x")
 
-        select_files_btn = tk.Button(file_frame, text="載入 PY 檔案(們)", command=self.load_py_files)
+        select_files_btn = tk.Button(file_frame, text="載入 PY 檔案", command=self.load_py_files)
         select_files_btn.pack(side=tk.RIGHT)
 
         # 搜尋設定區
@@ -66,7 +63,7 @@ class App(tk.Tk):
         # 設定 Treeview 標籤顏色，現在 self.tree 已經被建立
         self.tree.tag_configure("file_node", background="#D3D3D3", foreground="blue", font=("", 9, "bold"))
 
-        self.tree.pack(side=tk.LEFT, fill="both", expand=True) # 現在 pack 就不會出錯了
+        self.tree.pack(side=tk.LEFT, fill="both", expand=True)
         # --- 結束修正 ---
 
         scrollbar = ttk.Scrollbar(result_frame, orient="vertical", command=self.tree.yview)
