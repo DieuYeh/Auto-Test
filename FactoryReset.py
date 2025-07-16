@@ -160,6 +160,23 @@ class FactoryReset(unittest.TestCase):
             print("factory button works, change sharpness to 50%")
         else:
             self.fail("factory reset button does not work(Sharpness)")
+    
+    #Case 05:檢查Gamma是否為50%
+    def test_case05_Check_Gamma(self):
+        
+        #點擊Image按鈕進入image頁面
+        Image_button = self.driver.find_element(By.ID, "a_Image")
+        Image_button.click()
+        time.sleep(2)
+
+        # 定位到slider_Gamma元素
+        slider_Gamma = self.driver.find_element(By.ID, "input_Gamma")
+        slider_Gamma_style = slider_Gamma.get_attribute('value')
+        print(slider_Gamma_style)
+        if slider_Gamma_style=="50%":
+            print("factory button works, change Gamma to 50%")
+        else:
+            self.fail("factory reset button does not work(Gamma)")
 
 
     @classmethod
