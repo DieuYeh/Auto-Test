@@ -66,6 +66,7 @@ class FactoryReset(unittest.TestCase):
         LoginIn_button.click()
         time.sleep(10)
 
+        '''
         #點擊Administrator按鈕進入Management頁面
         Administrator_button = cls.driver.find_element(By.XPATH, "//span[@data-lang='span_A026']")
         Administrator_button.click()
@@ -86,7 +87,7 @@ class FactoryReset(unittest.TestCase):
         LoginIn_button = cls.driver.find_element(By.ID, "button_SignIn_OK")
         LoginIn_button.click()
         time.sleep(10)
-           
+        '''
         
     def setUp(self):
 
@@ -142,6 +143,23 @@ class FactoryReset(unittest.TestCase):
             print("factory button works, change saturation to 50%")
         else:
             self.fail("factory reset button does not work(Saturation)")
+    
+    #Case 04:檢查Sharpness是否為50%
+    def test_case04_Check_Sharpness(self):
+        
+        #點擊Image按鈕進入image頁面
+        Image_button = self.driver.find_element(By.ID, "a_Image")
+        Image_button.click()
+        time.sleep(2)
+
+        # 定位到slider_Sharpness元素
+        slider_Sharpness = self.driver.find_element(By.ID, "input_Saturation")
+        slider_Sharpness_style = slider_Sharpness.get_attribute('value')
+        print(slider_Sharpness_style)
+        if slider_Sharpness_style=="50%":
+            print("factory button works, change sharpness to 50%")
+        else:
+            self.fail("factory reset button does not work(Sharpness)")
 
 
     @classmethod
