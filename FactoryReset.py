@@ -12,10 +12,12 @@ import time
 import cv2
 import numpy as np
 import HTMLTestRunner # type: ignore
+print(HTMLTestRunner.__file__)
 import os
 import configparser
 
-class MyTestCase(unittest.TestCase):
+
+class FactoryReset(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -92,12 +94,6 @@ class MyTestCase(unittest.TestCase):
 
     #Case 01:檢查亮度是否為50%
     def test_case01_Check_Brightness(self):
-
-        #定義圖片的基本儲存路徑
-        base_path = 'D:/SeleniumProject/Resolution/'
-        #如果路徑不存在，則創建資料夾
-        if not os.path.exists(base_path):
-            os.makedirs(base_path)
         
         #點擊Image按鈕進入image頁面
         Image_button = self.driver.find_element(By.ID, "a_Image")
@@ -105,13 +101,47 @@ class MyTestCase(unittest.TestCase):
         time.sleep(2)
 
         # 定位到slider_Brightness元素
-        slider_Brightness = self.driver.find_element(By.ID, "input_Brightness1")
+        slider_Brightness = self.driver.find_element(By.ID, "input_Brightness")
         slider_Brightness_style = slider_Brightness.get_attribute('value')
         print(slider_Brightness_style)
         if slider_Brightness_style=="50%":
-            print("Default button works")
+            print("factory button works, change brightness to 50%")
         else:
-            self.fail("Default button does not work(Brightness)")
+            self.fail("factory reset does not work(Brightness)")
+    
+    #Case 02:檢查contast是否為50%
+    def test_case02_Check_Contrast(self):
+        
+        #點擊Image按鈕進入image頁面
+        Image_button = self.driver.find_element(By.ID, "a_Image")
+        Image_button.click()
+        time.sleep(2)
+
+        # 定位到slider_Contrast元素
+        slider_Contrast = self.driver.find_element(By.ID, "input_Contrast")
+        slider_Contrast_style = slider_Contrast.get_attribute('value')
+        print(slider_Contrast_style)
+        if slider_Contrast_style=="50%":
+            print("factory button works, change contrast to 50%")
+        else:
+            self.fail("factory reset button does not work(Contrast)")
+    
+    #Case 03:檢查Saturation是否為50%
+    def test_case03_Check_Saturation(self):
+        
+        #點擊Image按鈕進入image頁面
+        Image_button = self.driver.find_element(By.ID, "a_Image")
+        Image_button.click()
+        time.sleep(2)
+
+        # 定位到slider_Saturation元素
+        slider_Saturation = self.driver.find_element(By.ID, "input_Saturation")
+        slider_Saturation_style = slider_Saturation.get_attribute('value')
+        print(slider_Saturation_style)
+        if slider_Saturation_style=="50%":
+            print("factory button works, change saturation to 50%")
+        else:
+            self.fail("factory reset button does not work(Saturation)")
 
 
     @classmethod
