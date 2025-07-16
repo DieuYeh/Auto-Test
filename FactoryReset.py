@@ -12,7 +12,6 @@ import time
 import cv2
 import numpy as np
 import HTMLTestRunner # type: ignore
-print(HTMLTestRunner.__file__)
 import os
 import configparser
 
