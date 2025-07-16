@@ -176,7 +176,7 @@ class FactoryReset(unittest.TestCase):
         if slider_Gamma_style=="50%":
             print("factory button works, change Gamma to 50%")
         else:
-            self.fail("factory reset button does not work(Gamma)")
+            self.fail("factory reset button does not work(Gamma1)")
 
 
     @classmethod
