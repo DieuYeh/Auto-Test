@@ -217,8 +217,8 @@ class App(tk.Tk):
 
         for py_file_path, file_info in self.py_files.items():
             file_display_name = os.path.basename(py_file_path) 
-            file_node_id = py_file_path 
-
+            file_node_id = py_file_path # 文件節點的 ID 保持為完整路徑
+            
             self.tree.insert("", "end", iid=file_node_id, 
                              values=("", file_display_name, "☐"), 
                              tags=("file_node", "checkbox")) 
@@ -226,7 +226,7 @@ class App(tk.Tk):
             
             self.tree.item(file_node_id, open=True) 
             
-            self.selected_cases_by_file[py_file_path] = {}
+            self.selected_cases_by_file[py_file_path] = {} # 鍵是完整的 py_file_path
 
             try:
                 with open(py_file_path, 'r', encoding='utf-8') as f:
@@ -245,12 +245,19 @@ class App(tk.Tk):
                 
                 file_cases_count = 0
                 for match in matches:
-                    case_name = match.group(1) 
+                    case_name = match.group(1) # 這裡的 case_name 是純粹的 "test_case..."
                     if case_name not in self.selected_cases_by_file[py_file_path]:
                         var = tk.BooleanVar(value=False) 
                         self.selected_cases_by_file[py_file_path][case_name] = var
-                        self.tree.insert(file_node_id, "end", iid=f"{file_node_id}-{case_name}", 
+                        
+                        # --- 修改這裡：讓子節點的 iid 更簡潔 ---
+                        # 我們將 iid 設置為 '文件路徑::測試案例名稱'
+                        # 這樣我們在解析時，可以簡單地在 '::' 處分割
+                        child_iid = f"{file_node_id}::{case_name}" 
+                        self.tree.insert(file_node_id, "end", iid=child_iid, 
                                          values=(overall_no, case_name, "☐"), tags=("checkbox",))
+                        # ----------------------------------------
+
                         total_cases_found += 1
                         file_cases_count += 1
                         overall_no += 1 
@@ -274,28 +281,44 @@ class App(tk.Tk):
             self.show_status_message("未在載入的 PY 檔案中找到任何測試案例。", "warning")
 
     def on_tree_click(self, event):
+        print(f"點擊事件原始座標 - x: {event.x}, y: {event.y}")
+        
         item_id = self.tree.identify_row(event.y)
+        column = self.tree.identify_column(event.x)
+        
+        print(f"識別到的 Treeview 項目 ID: {item_id}")
+        print(f"識別到的 Treeview 欄位 ID: {column}")
+
         if not item_id:
+            print("未識別到任何項目 ID，點擊在空白區域。")
             return
 
-        column = self.tree.identify_column(event.x)
         if column == "#3": 
+            print(f"點擊在 '選擇' 列 (Column #3). Item ID: {item_id}")
             tags = self.tree.item(item_id, "tags")
+            print(f"點擊項目的標籤: {tags}")
             
             if "file_node" in tags:
+                # 處理檔案節點的點擊 (全選/全取消)
                 py_file_path = item_id 
+                print(f"點擊的是檔案節點: {py_file_path}")
                 
                 all_children = self.tree.get_children(item_id)
                 if not all_children: 
+                    print(f"檔案節點 {py_file_path} 沒有子項目，無法切換狀態。")
                     return
 
                 any_unselected = False
                 for child_id in all_children:
-                    parts = child_id.split('-', 1) 
-                    if len(parts) < 2: continue 
+                    # --- 修改這裡：使用 '::' 分割來獲取 child_case_name ---
+                    parts = child_id.split('::', 1)
+                    if len(parts) < 2: 
+                        print(f"警告: 子項目 ID 格式不正確，沒有 '::': {child_id}")
+                        continue 
                     
                     child_py_path = parts[0]
-                    child_case_name = parts[1]
+                    child_case_name = parts[1] # <-- 現在這個才是純粹的測試案例名稱
+                    # --------------------------------------------------------
                     
                     if child_py_path == py_file_path: 
                         if child_case_name in self.selected_cases_by_file[child_py_path]:
@@ -304,26 +327,45 @@ class App(tk.Tk):
                                 break
                 
                 new_state = any_unselected 
+                print(f"檔案節點切換到新狀態: {new_state} (True=全選, False=全取消)")
 
                 for child_id in all_children:
-                    parts = child_id.split('-', 1)
+                    # --- 修改這裡：使用 '::' 分割來獲取 child_case_name ---
+                    parts = child_id.split('::', 1)
                     if len(parts) < 2: continue
                     child_py_path = parts[0]
-                    child_case_name = parts[1]
+                    child_case_name = parts[1] # <-- 現在這個才是純粹的測試案例名稱
+                    # --------------------------------------------------------
 
                     if child_py_path == py_file_path:
-                        self.selected_cases_by_file[child_py_path][case_name].set(new_state)
-                        self.update_checkbox_display(child_id, new_state)
+                        if child_case_name in self.selected_cases_by_file[child_py_path]:
+                            self.selected_cases_by_file[child_py_path][child_case_name].set(new_state)
+                            self.update_checkbox_display(child_id, new_state)
+                        else:
+                            print(f"警告: 在 self.selected_cases_by_file 中未找到測試案例 {child_case_name} (屬於 {child_py_path})")
                 
                 self.update_file_node_checkbox_display(py_file_path)
                 self.update_selected_count_label()
+                print("檔案節點處理完成。")
 
-            else:
+            else: # 點擊的是單個測試案例節點
+                print(f"點擊的是測試案例節點: {item_id}")
                 parent_id = self.tree.parent(item_id)
-                if not parent_id: return 
+                if not parent_id: 
+                    print("測試案例節點沒有父節點，返回。")
+                    return 
 
                 py_file_path = parent_id
-                case_name = item_id.split('-', 1)[1] 
+                
+                # --- 修改這裡：使用 '::' 分割來獲取 case_name ---
+                if '::' in item_id:
+                    case_name = item_id.split('::', 1)[1] # <-- 現在這個才是純粹的測試案例名稱
+                else:
+                    print(f"錯誤: 測試案例節點 ID 格式不正確，沒有 '::': {item_id}")
+                    return
+                # --------------------------------------------------------
+
+                print(f"**準備查詢: py_file_path='{py_file_path}', case_name='{case_name}'**") 
 
                 if py_file_path in self.selected_cases_by_file and \
                    case_name in self.selected_cases_by_file[py_file_path]:
@@ -332,6 +374,11 @@ class App(tk.Tk):
                     self.update_checkbox_display(item_id, current_var.get())
                     self.update_file_node_checkbox_display(py_file_path) 
                     self.update_selected_count_label()
+                    print(f"測試案例 '{case_name}' 狀態已切換到: {current_var.get()}")
+                else:
+                    print(f"警告: 無法在 self.selected_cases_by_file 中找到測試案例，查詢鍵為: '{case_name}' (屬於 '{py_file_path}')")
+        else:
+            print(f"點擊不在 '選擇' 列 (Column: {column})，無操作。")
 
     def update_checkbox_display(self, item_id, is_selected):
         current_values = list(self.tree.item(item_id, "values"))
@@ -442,18 +489,18 @@ class App(tk.Tk):
         for mod_name, info in sorted(selected_cases_by_module.items()):
             class_name = info['class_name']
             output_content.append(f"    print(f\"\\n--- Running tests for {mod_name}.py ---\")\n")
-            output_content.append(f"    suite_{mod_name} = unittest.TestSuite()\n")
+            output_content.append(f"    suite = unittest.TestSuite()\n")
             for case_name in info['cases']:
-                output_content.append(f"    suite_{mod_name}.addTest({class_name}('{case_name}'))\n")
+                output_content.append(f"    suite.addTest({class_name}('{case_name}'))\n")
             
             output_content.append(f"    report_file_{mod_name} = os.path.join(report_dir, f'Report_{mod_name}.html')\n")
             output_content.append(f"    with open(report_file_{mod_name}, 'wb') as f:\n")
-            output_content.append(f"        runner_{mod_name} = HTMLTestRunner.HTMLTestRunner(\n")
+            output_content.append(f"        runner = HTMLTestRunner.HTMLTestRunner(\n")
             output_content.append("            stream=f,\n")
             output_content.append(f"            title='{mod_name} Test Report',\n")
             output_content.append("            description='Individual test report for {mod_name}.py'\n")
             output_content.append("        )\n")
-            output_content.append(f"        runner_{mod_name}.run(suite_{mod_name})\n")
+            output_content.append(f"        runner.run(suite)\n")
             output_content.append(f"    print(f\"Test report for {mod_name}.py saved to {{report_file_{mod_name}}}\")\n")
             output_content.append("\n")
         
