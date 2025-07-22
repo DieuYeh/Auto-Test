@@ -5,9 +5,10 @@ import os
 import shutil
 from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter
+from openpyxl.styles import Border, Side, Alignment, Font, PatternFill
 from bs4 import BeautifulSoup
 import subprocess
-from datetime import datetime # 匯入 datetime 模組
+from datetime import datetime
 
 class App(tk.Tk):
     def __init__(self):
@@ -392,7 +393,7 @@ class App(tk.Tk):
 
         for py_file_path, file_cases in self.selected_cases_by_file.items():
             file_info = self.py_files[py_file_path]
-            module_name = file_info['module_name']
+            module_name = os.path.splitext(os.path.basename(py_file_path))[0] # 確保這裡使用 file_path 來獲取 module_name
             test_class_name = file_info['test_class_name'] if file_info['test_class_name'] else "MyTestCase"
 
             for case_name, var in file_cases.items():
@@ -445,39 +446,35 @@ class App(tk.Tk):
             output_content.append(f"    print(f\"\\n--- Running tests for {mod_name}.py ---\")\n")
             output_content.append(f"    suite = unittest.TestSuite()\n")
             
-            # 在生成的檔案中定義 class_name 字串，供報告標題、描述和重命名使用
             output_content.append(f"    class_name = '{current_class_name}'\n") 
             
+            # 收集所有選定的測試案例名稱，用於報告描述
+            selected_test_cases_str = ', '.join([f"'{case_name}'" for case_name in info['cases']]) # 將列表轉換為字串
+            output_content.append(f"    selected_cases_list = [{selected_test_cases_str}]\n") # 在生成的檔案中創建一個列表
+            output_content.append(f"    cases_description = '包含測試案例: ' + ', '.join(selected_cases_list)\n")
+
             for case_name in info['cases']:
                 output_content.append(f"    suite.addTest({current_class_name}('{case_name}'))\n") 
             
-            # 確保報告目錄存在
-            output_content.append(f"    report_dir = 'D:/SeleniumProject/test_reports'\n")
-            output_content.append(f"    os.makedirs(report_dir, exist_ok=True)\n")
-            
-            # 儲存報告生成前的檔案列表，以便稍後識別新檔案
-            output_content.append(f"    existing_files = set(os.listdir(report_dir))\n")
-
+            output_content.append(f"    os.makedirs('D:/SeleniumProject/test_reports', exist_ok=True)\n")
+            output_content.append(f"    existing_files = set(os.listdir('D:/SeleniumProject/test_reports'))\n")
             output_content.append(f"    runner = HTMLTestRunner.HTMLTestRunner(\n")
-            output_content.append(f"        output=report_dir,\n") # 讓 HTMLTestRunner 將報告輸出到目錄
+            output_content.append(f"        output='D:/SeleniumProject/test_reports',\n") 
             output_content.append(f"        title=f'Test Report for {{class_name}} ({mod_name})',\n") 
-            output_content.append(f"        description=f'Test results for {{class_name}} class in {mod_name} module.'\n") 
+            output_content.append(f"        description=f'Test results for {{class_name}} class in {mod_name} module. {{cases_description}}'\n") 
             output_content.append("    )\n")
             output_content.append(f"    runner.run(suite)\n")
-            
-            # ******** 新增的檔案重命名邏輯 ********
-            output_content.append(f"    # 找到最新生成的 HTML 報告檔案並重命名\n")
-            output_content.append(f"    new_files = set(os.listdir(report_dir)) - existing_files\n")
+            output_content.append(f"    new_files = set(os.listdir('D:/SeleniumProject/test_reports')) - existing_files\n")
             output_content.append(f"    new_html_report_path = None\n")
             output_content.append(f"    for f_name in new_files:\n")
             output_content.append(f"        if f_name.endswith('.html'):\n")
-            output_content.append(f"            new_html_report_path = os.path.join(report_dir, f_name)\n")
+            output_content.append(f"            new_html_report_path = os.path.join('D:/SeleniumProject/test_reports', f_name)\n")
             output_content.append(f"            break\n")
             output_content.append(f"    \n")
             output_content.append(f"    if new_html_report_path:\n")
             output_content.append(f"        current_date = datetime.now().strftime('%Y%m%d_%H%M%S')\n")
             output_content.append(f"        desired_report_name = f'{{class_name}}_{{current_date}}.html'\n")
-            output_content.append(f"        desired_report_full_path = os.path.join(report_dir, desired_report_name)\n")
+            output_content.append(f"        desired_report_full_path = os.path.join('D:/SeleniumProject/test_reports', desired_report_name)\n")
             output_content.append(f"        try:\n")
             output_content.append(f"            os.rename(new_html_report_path, desired_report_full_path)\n")
             output_content.append(f"            print(f\"Test report for {{class_name}} saved and renamed to {{desired_report_full_path}}\")\n")
@@ -485,9 +482,8 @@ class App(tk.Tk):
             output_content.append(f"            print(f\"Error renaming report for {{class_name}}: {{e}}\")\n")
             output_content.append(f"            print(f\"Original report path: {{new_html_report_path}}\")\n")
             output_content.append(f"    else:\n")
-            output_content.append(f"        print(f\"Could not find newly generated HTML report for {{class_name}} in {{report_dir}}\")\n")
-            # ******** 檔案重命名邏輯結束 ********
-            
+            output_content.append(f"        print(f\"Could not find newly generated HTML report for {{class_name}} in D:/SeleniumProject/test_reports\")\n")
+                            
             output_content.append("\n")
         
         output_content.append("    print(\"\\n--- All selected test suites have been executed and reported. ---\")\n")
@@ -528,8 +524,8 @@ class App(tk.Tk):
         if not html_dir:
             self.show_status_message("取消選擇 HTML 報告資料夾。", "info")
             return
-        self.last_html_report_folder = html_dir # 儲存選擇的 HTML 資料夾路徑
-        self.open_report_folder_btn.config(state=tk.NORMAL) # 啟用按鈕
+        self.last_html_report_folder = html_dir 
+        self.open_report_folder_btn.config(state=tk.NORMAL) 
 
         excel_files_in_result = [f for f in os.listdir("Result") if f.endswith((".xlsx", ".xls"))]
         if not excel_files_in_result:
@@ -542,20 +538,23 @@ class App(tk.Tk):
             workbook = load_workbook(testplan_path_in_result)
             sheet = workbook.active 
 
-            read_col = self.read_col_entry.get().upper()
-            read_row = int(self.read_row_entry.get()) - 1 
-            write_col = self.write_col_entry.get().upper()
-            write_row = int(self.write_row_entry.get()) - 1
+            read_col_str = self.read_col_entry.get().upper()
+            read_row_int = int(self.read_row_entry.get()) - 1 
+            write_col_str = self.write_col_entry.get().upper()
+            write_row_int = int(self.write_row_entry.get()) - 1
 
-            if not read_col.isalpha() or not write_col.isalpha():
+            if not read_col_str.isalpha() or not write_col_str.isalpha():
                 self.show_status_message("讀取/寫入欄位必須是字母 (例如 A, B)！", "error")
                 return
-            if read_row < 0 or write_row < 0:
+            if read_row_int < 0 or write_row_int < 0:
                 self.show_status_message("讀取/寫入行數必須是正整數！", "error")
                 return
 
-            read_col_idx = ord(read_col) - ord('A') 
-            write_col_idx = ord(write_col) - ord('A')
+            # openpyxl 的列是 1-based index, get_column_letter 輸出的是字母
+            # 我們需要的是 openpyxl 內部的數字索引 (1-based)
+            read_col_idx = get_column_letter(ord(read_col_str) - ord('A') + 1)
+            write_col_idx = get_column_letter(ord(write_col_str) - ord('A') + 1)
+
 
             html_files = [f for f in os.listdir(html_dir) if f.endswith(".html")]
             if not html_files:
@@ -591,17 +590,29 @@ class App(tk.Tk):
                     self.show_status_message(f"解析 HTML 檔案 '{html_file}' 內容時發生錯誤: {e}", "warning")
 
             results_written_count = 0
-            for row_idx, row in enumerate(sheet.iter_rows()):
-                if row_idx < read_row: 
+            for row_idx, row_data in enumerate(sheet.iter_rows()): # 使用 iter_rows 迭代器更有效率
+                current_excel_row_num = row_idx + 1 # Excel 行號從 1 開始
+
+                if current_excel_row_num < read_row_int + 1: # 從使用者輸入的起始行開始處理
                     continue
 
-                testcase_name_cell = sheet.cell(row=row_idx + 1, column=read_col_idx + 1) 
+                # 獲取 Test Case 名稱 (使用使用者提供的讀取欄位)
+                testcase_name_cell = sheet[f"{read_col_str}{current_excel_row_num}"]
                 testcase_name = str(testcase_name_cell.value).strip() if testcase_name_cell.value else ""
 
                 if testcase_name: 
                     if testcase_name in all_html_results:
                         result_to_write = all_html_results[testcase_name]
-                        sheet.cell(row=row_idx + 1, column=write_col_idx + 1, value=result_to_write)
+                        
+                        # 定位寫入結果的儲存格
+                        write_cell = sheet[f"{write_col_str}{current_excel_row_num}"]
+                        write_cell.value = result_to_write
+                        
+                        write_cell.font = Font() # 預設字體
+                        write_cell.border = Border() # 無邊框
+                        write_cell.fill = PatternFill(fill_type=None) # 無填充
+                        write_cell.alignment = Alignment() # 預設對齊
+
                         results_written_count += 1
 
             original_filename = os.path.basename(testplan_path_in_result)
@@ -619,9 +630,9 @@ class App(tk.Tk):
                 return
 
             workbook.save(save_path)
-            self.last_excel_save_path = save_path # 儲存保存的 Excel 路徑
+            self.last_excel_save_path = save_path 
             self.show_status_message(f"測試結果已成功寫入並保存到:\n{save_path}", "success")
-            self.open_report_folder_btn.config(state=tk.NORMAL) # 啟用按鈕
+            self.open_report_folder_btn.config(state=tk.NORMAL) 
 
         except Exception as e:
             self.show_status_message(f"寫入結果到 Excel 時發生錯誤: {e}", "error")
