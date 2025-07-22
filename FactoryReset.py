@@ -191,7 +191,7 @@ class FactoryReset(unittest.TestCase):
             self.fail("WhiteBalanceAuto is OFF")
     
     #Case 07:檢查色溫是否為5000k
-    def test_case07_Check_Color_Temperature(self):
+    def test_case007_Check_Color_Temperature(self):
         #點擊Image按鈕進入image頁面
         Image_button = self.driver.find_element(By.ID, "a_Image")
         Image_button.click()
@@ -226,6 +226,23 @@ class FactoryReset(unittest.TestCase):
             self.fail("LDC is ON")
         else:
             print("LDC is OFF")
+    
+    #Case 09:檢查Flip是否為off
+    def test_case09_Check_RotateViewFlip(self):
+        #點擊Image按鈕進入image頁面
+        Image_button = self.driver.find_element(By.ID, "a_Image")
+        Image_button.click()
+        time.sleep(2)
+        #點擊Image config按鈕進入config頁面
+        Image_button = self.driver.find_element(By.ID, "a_ImageConfigs")
+        Image_button.click()
+        time.sleep(2)
+        flip_div = self.driver.find_element(By.ID, "select_ImagePara_Flip_div")
+        status = flip_div.get_attribute("data-text")
+        if status == "Off":
+            print("選項目前是OFF")
+        else:
+            self.fail("flip is not off, it's " + status)
 
 
     @classmethod

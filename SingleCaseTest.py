@@ -70,29 +70,24 @@ class FactoryReset(unittest.TestCase):
         time.sleep(2)
 
     
-    #Case 07:檢查色溫是否為5000k
-    def test_case07_Check_Color_Temperature(self):
+    #Case 09:檢查Flip是否為off
+    def test_case09_Check_RotateViewFlip(self):
         #點擊Image按鈕進入image頁面
         Image_button = self.driver.find_element(By.ID, "a_Image")
         Image_button.click()
         time.sleep(2)
-        checkbox = self.driver.find_element(By.CSS_SELECTOR, "#div_WhiteBalance .slider")
-        if checkbox.is_selected():
-            checkbox.click()  # 若不是OFF，點一下勾選它
-        # 找到色溫滑桿
-        color_temp_slider = self.driver.find_element(By.ID, "slider_colorTemperature")
-        # 取得當前的 value 屬性
-        current_temp = color_temp_slider.get_attribute("value")
-        # 驗證是否為 5000K
-        if current_temp == "5000":
-            print("Color temperature is 5000K")
-        else:
-            self.fail(f"Color temperature is {current_temp}K, not 5000K")
-        #等待兩秒後切換回為ON，不能馬上切換，否則會失敗
+        #點擊Image config按鈕進入config頁面
+        Image_button = self.driver.find_element(By.ID, "a_ImageConfigs")
+        Image_button.click()
         time.sleep(2)
-        checkbox1 = self.driver.find_element(By.CSS_SELECTOR, "#div_WhiteBalance .slider")
-        if not checkbox1.is_selected():
-            checkbox1.click()  # 若不是 ON，點一下勾選它
+        flip_div = self.driver.find_element(By.ID, "select_ImagePara_Flip_div")
+        status = flip_div.get_attribute("data-text")
+        if status == "Off":
+            print("選項目前是OFF")
+        else:
+            self.fail("flip is not off, it's " + status)
+       
+        
 
 
             
