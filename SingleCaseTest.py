@@ -70,8 +70,8 @@ class FactoryReset(unittest.TestCase):
         time.sleep(2)
 
     
-    #Case 09:檢查Flip是否為off
-    def test_case09_Check_RotateViewFlip(self):
+    #Case 10:檢查VideoOrientation是否為0°
+    def test_case010_Check_VideoOrientation(self):
         #點擊Image按鈕進入image頁面
         Image_button = self.driver.find_element(By.ID, "a_Image")
         Image_button.click()
@@ -80,12 +80,12 @@ class FactoryReset(unittest.TestCase):
         Image_button = self.driver.find_element(By.ID, "a_ImageConfigs")
         Image_button.click()
         time.sleep(2)
-        flip_div = self.driver.find_element(By.ID, "select_ImagePara_Flip_div")
+        flip_div = self.driver.find_element(By.ID, "select_ImagePara_VideoOrientation_div")
         status = flip_div.get_attribute("data-text")
-        if status == "Off":
-            print("選項目前是OFF")
+        if status == "0°":
+            print("the option is 0°")
         else:
-            self.fail("flip is not off, it's " + status)
+            self.fail("Video Orientation is not 0°, it's " + status)
        
         
 

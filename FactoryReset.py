@@ -196,9 +196,11 @@ class FactoryReset(unittest.TestCase):
         Image_button = self.driver.find_element(By.ID, "a_Image")
         Image_button.click()
         time.sleep(2)
-        checkbox = self.driver.find_element(By.CSS_SELECTOR, "#div_WhiteBalance .slider")
+         #input的checkbox才是真正的狀態控制，slidery則是可點擊，因此判斷checkbox點擊slider
+        checkbox = self.driver.find_element(By.CSS_SELECTOR, "#div_WhiteBalance input[type='checkbox']")
+        slider = self.driver.find_element(By.CSS_SELECTOR, "#div_WhiteBalance .slider")
         if checkbox.is_selected():
-            checkbox.click()  # 若不是OFF，點一下勾選它
+            slider.click()  # 若不是OFF，點一下勾選它
         # 找到色溫滑桿
         color_temp_slider = self.driver.find_element(By.ID, "slider_colorTemperature")
         # 取得當前的 value 屬性
@@ -208,11 +210,12 @@ class FactoryReset(unittest.TestCase):
             print("Color temperature is 5000K")
         else:
             self.fail(f"Color temperature is {current_temp}K, not 5000K")
-        #等待兩秒後切換回為ON，不能馬上切換，否則會失敗
-        time.sleep(2)
-        checkbox1 = self.driver.find_element(By.CSS_SELECTOR, "#div_WhiteBalance .slider")
-        if not checkbox1.is_selected():
-            checkbox1.click()  # 若不是 ON，點一下勾選它
+        #等待三秒後切換回為ON，不能馬上切換，否則會失敗
+        time.sleep(3)
+        checkbox = self.driver.find_element(By.CSS_SELECTOR, "#div_WhiteBalance input[type='checkbox']")
+        slider = self.driver.find_element(By.CSS_SELECTOR, "#div_WhiteBalance .slider")
+        if not checkbox.is_selected():
+            slider.click()  # 若不是 ON，點一下勾選它
 
     #Case 08:檢查LDC是否為off
     def test_case008_Check_LDC(self):
@@ -243,6 +246,23 @@ class FactoryReset(unittest.TestCase):
             print("選項目前是OFF")
         else:
             self.fail("flip is not off, it's " + status)
+
+    #Case 10:檢查VideoOrientation是否為0°
+    def test_case010_Check_VideoOrientation(self):
+        #點擊Image按鈕進入image頁面
+        Image_button = self.driver.find_element(By.ID, "a_Image")
+        Image_button.click()
+        time.sleep(2)
+        #點擊Image config按鈕進入config頁面
+        Image_button = self.driver.find_element(By.ID, "a_ImageConfigs")
+        Image_button.click()
+        time.sleep(2)
+        flip_div = self.driver.find_element(By.ID, "select_ImagePara_VideoOrientation_div")
+        status = flip_div.get_attribute("data-text")
+        if status == "0°":
+            print("the option is 0°")
+        else:
+            self.fail("Video Orientation is not 0°, it's " + status)
 
 
     @classmethod
