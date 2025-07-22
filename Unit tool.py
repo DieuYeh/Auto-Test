@@ -5,8 +5,12 @@ import os
 import shutil
 from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter
+from openpyxl.styles import Border, Side, Alignment, Font, PatternFill
 from bs4 import BeautifulSoup
 import subprocess
+from datetime import datetime
+
+'''更新時間: 2025/07/22'''
 
 class App(tk.Tk):
     def __init__(self):
@@ -18,10 +22,9 @@ class App(tk.Tk):
         self.selected_cases_by_file = {} 
         self.tree_file_nodes = {} 
         self.last_py_folder = None 
-        self.last_html_report_folder = None # 新增：用於儲存最近一次選擇的 HTML 報告資料夾
-        self.last_excel_save_path = None # 新增：用於儲存最近一次保存 Excel 結果的路徑
+        self.last_html_report_folder = None
+        self.last_excel_save_path = None
         
-        # 狀態訊息顯示區塊
         self.status_label = tk.Label(self, text="準備就緒", bd=1, relief=tk.SUNKEN, anchor=tk.W, font=("Arial", 10))
         self.status_label.pack(side=tk.TOP, fill=tk.X, padx=5, pady=5)
 
@@ -36,7 +39,6 @@ class App(tk.Tk):
         self.notebook.add(self.excel_tab, text="Excel 報告處理")
         self.create_excel_tab_widgets(self.excel_tab)
 
-    # 用於顯示狀態訊息的輔助函式 (簡化)
     def show_status_message(self, message, message_type="info"):
         color = "black" 
         if message_type == "warning":
@@ -49,7 +51,6 @@ class App(tk.Tk):
         self.status_label.config(text=message, fg=color)
 
     def create_py_tab_widgets(self, parent_frame):
-        # 檔案選擇區
         file_frame = tk.LabelFrame(parent_frame, text="PY 檔案載入", padx=10, pady=10)
         file_frame.pack(fill="x", padx=10, pady=5)
 
@@ -59,7 +60,6 @@ class App(tk.Tk):
         select_files_btn = tk.Button(file_frame, text="載入 PY 檔案", command=self.load_py_files)
         select_files_btn.pack(side=tk.RIGHT)
 
-        # 選項按鈕區
         option_frame = tk.Frame(parent_frame, padx=10, pady=5)
         option_frame.pack(fill="x", padx=10, pady=5)
 
@@ -72,19 +72,16 @@ class App(tk.Tk):
         self.selected_count_label = tk.Label(option_frame, text="已勾選測項: 0")
         self.selected_count_label.pack(side=tk.LEFT, padx=10)
         
-        # 開啟資料夾按鈕 (PY分頁)
         self.open_py_folder_btn = tk.Button(option_frame, text="開啟PY資料夾", command=self.open_last_py_folder, state=tk.DISABLED)
         self.open_py_folder_btn.pack(side=tk.RIGHT, padx=5)
 
-        # 匯出 Unit Plan 按鈕
         export_btn = tk.Button(option_frame, text="匯出 Unittest Plan", command=self.export_unittest_plan)
         export_btn.pack(side=tk.RIGHT)
-        # 搜尋設定區
+
         search_frame = tk.LabelFrame(parent_frame, text="測項分析", padx=10, pady=10)
         search_frame.pack(fill="x", padx=10, pady=5)
         tk.Label(search_frame, text="備註: 將會分析PY內所含 \"test_case\"的測項，請符合名稱設計。", fg="blue").pack(side=tk.LEFT, padx=5)
 
-        # 結果顯示區 (Treeview)
         result_frame = tk.LabelFrame(parent_frame, text="測項選擇結果", padx=10, pady=10)
         result_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
@@ -150,7 +147,6 @@ class App(tk.Tk):
         write_results_btn = tk.Button(excel_buttons_frame, text="寫入結果 (HTML -> Excel)", command=self.write_results_to_excel)
         write_results_btn.pack(side=tk.LEFT, padx=5)
 
-        # 新增：開啟報告資料夾按鈕 (Excel分頁)
         self.open_report_folder_btn = tk.Button(excel_buttons_frame, text="開啟報告資料夾", command=self.open_last_report_folder, state=tk.DISABLED)
         self.open_report_folder_btn.pack(side=tk.RIGHT, padx=5)
 
@@ -191,11 +187,11 @@ class App(tk.Tk):
                 displayed_names = ", ".join([os.path.basename(path) for path in self.py_files.keys()])
                 self.file_list_label.config(text=f"已選擇: {displayed_names}")
                 self.analyze_all_py_files() 
-                self.open_py_folder_btn.config(state=tk.NORMAL) # 更新按鈕名稱
+                self.open_py_folder_btn.config(state=tk.NORMAL)
                 self.show_status_message(f"已載入 {len(file_paths)} 個 PY 檔案。", "success")
             else:
                 self.file_list_label.config(text="未載入任何 PY 檔案")
-                self.open_py_folder_btn.config(state=tk.DISABLED) # 更新按鈕名稱
+                self.open_py_folder_btn.config(state=tk.DISABLED)
                 self.show_status_message("未載入任何 PY 檔案。", "warning")
         else:
             self.show_status_message("取消載入 PY 檔案。", "info")
@@ -217,7 +213,7 @@ class App(tk.Tk):
 
         for py_file_path, file_info in self.py_files.items():
             file_display_name = os.path.basename(py_file_path) 
-            file_node_id = py_file_path # 文件節點的 ID 保持為完整路徑
+            file_node_id = py_file_path 
             
             self.tree.insert("", "end", iid=file_node_id, 
                              values=("", file_display_name, "☐"), 
@@ -226,7 +222,7 @@ class App(tk.Tk):
             
             self.tree.item(file_node_id, open=True) 
             
-            self.selected_cases_by_file[py_file_path] = {} # 鍵是完整的 py_file_path
+            self.selected_cases_by_file[py_file_path] = {}
 
             try:
                 with open(py_file_path, 'r', encoding='utf-8') as f:
@@ -245,18 +241,14 @@ class App(tk.Tk):
                 
                 file_cases_count = 0
                 for match in matches:
-                    case_name = match.group(1) # 這裡的 case_name 是純粹的 "test_case..."
+                    case_name = match.group(1) 
                     if case_name not in self.selected_cases_by_file[py_file_path]:
                         var = tk.BooleanVar(value=False) 
                         self.selected_cases_by_file[py_file_path][case_name] = var
                         
-                        # --- 修改這裡：讓子節點的 iid 更簡潔 ---
-                        # 我們將 iid 設置為 '文件路徑::測試案例名稱'
-                        # 這樣我們在解析時，可以簡單地在 '::' 處分割
                         child_iid = f"{file_node_id}::{case_name}" 
                         self.tree.insert(file_node_id, "end", iid=child_iid, 
                                          values=(overall_no, case_name, "☐"), tags=("checkbox",))
-                        # ----------------------------------------
 
                         total_cases_found += 1
                         file_cases_count += 1
@@ -281,91 +273,57 @@ class App(tk.Tk):
             self.show_status_message("未在載入的 PY 檔案中找到任何測試案例。", "warning")
 
     def on_tree_click(self, event):
-        print(f"點擊事件原始座標 - x: {event.x}, y: {event.y}")
-        
         item_id = self.tree.identify_row(event.y)
         column = self.tree.identify_column(event.x)
         
-        print(f"識別到的 Treeview 項目 ID: {item_id}")
-        print(f"識別到的 Treeview 欄位 ID: {column}")
-
         if not item_id:
-            print("未識別到任何項目 ID，點擊在空白區域。")
             return
 
         if column == "#3": 
-            print(f"點擊在 '選擇' 列 (Column #3). Item ID: {item_id}")
             tags = self.tree.item(item_id, "tags")
-            print(f"點擊項目的標籤: {tags}")
             
             if "file_node" in tags:
-                # 處理檔案節點的點擊 (全選/全取消)
                 py_file_path = item_id 
-                print(f"點擊的是檔案節點: {py_file_path}")
                 
-                all_children = self.tree.get_children(item_id)
-                if not all_children: 
-                    print(f"檔案節點 {py_file_path} 沒有子項目，無法切換狀態。")
+                all_children_iids = self.tree.get_children(item_id)
+                if not all_children_iids: 
                     return
 
                 any_unselected = False
-                for child_id in all_children:
-                    # --- 修改這裡：使用 '::' 分割來獲取 child_case_name ---
-                    parts = child_id.split('::', 1)
-                    if len(parts) < 2: 
-                        print(f"警告: 子項目 ID 格式不正確，沒有 '::': {child_id}")
-                        continue 
-                    
-                    child_py_path = parts[0]
-                    child_case_name = parts[1] # <-- 現在這個才是純粹的測試案例名稱
-                    # --------------------------------------------------------
-                    
-                    if child_py_path == py_file_path: 
-                        if child_case_name in self.selected_cases_by_file[child_py_path]:
-                            if not self.selected_cases_by_file[child_py_path][child_case_name].get():
-                                any_unselected = True
-                                break
+                for child_iid in all_children_iids:
+                    parts = child_iid.split('::', 1)
+                    if len(parts) == 2:
+                        child_py_path = parts[0]
+                        child_case_name = parts[1]
+                        if child_py_path == py_file_path: 
+                            if child_case_name in self.selected_cases_by_file[child_py_path]:
+                                if not self.selected_cases_by_file[child_py_path][child_case_name].get():
+                                    any_unselected = True
+                                    break
                 
                 new_state = any_unselected 
-                print(f"檔案節點切換到新狀態: {new_state} (True=全選, False=全取消)")
 
-                for child_id in all_children:
-                    # --- 修改這裡：使用 '::' 分割來獲取 child_case_name ---
-                    parts = child_id.split('::', 1)
-                    if len(parts) < 2: continue
-                    child_py_path = parts[0]
-                    child_case_name = parts[1] # <-- 現在這個才是純粹的測試案例名稱
-                    # --------------------------------------------------------
+                for child_iid in all_children_iids:
+                    parts = child_iid.split('::', 1)
+                    if len(parts) == 2:
+                        child_py_path = parts[0]
+                        child_case_name = parts[1] 
 
-                    if child_py_path == py_file_path:
-                        if child_case_name in self.selected_cases_by_file[child_py_path]:
-                            self.selected_cases_by_file[child_py_path][child_case_name].set(new_state)
-                            self.update_checkbox_display(child_id, new_state)
-                        else:
-                            print(f"警告: 在 self.selected_cases_by_file 中未找到測試案例 {child_case_name} (屬於 {child_py_path})")
+                        if child_py_path == py_file_path:
+                            if child_case_name in self.selected_cases_by_file[child_py_path]:
+                                self.selected_cases_by_file[child_py_path][child_case_name].set(new_state)
+                                self.update_checkbox_display(child_iid, new_state)
                 
                 self.update_file_node_checkbox_display(py_file_path)
                 self.update_selected_count_label()
-                print("檔案節點處理完成。")
 
-            else: # 點擊的是單個測試案例節點
-                print(f"點擊的是測試案例節點: {item_id}")
-                parent_id = self.tree.parent(item_id)
-                if not parent_id: 
-                    print("測試案例節點沒有父節點，返回。")
+            else: 
+                parts = item_id.split('::', 1)
+                if len(parts) < 2: 
                     return 
 
-                py_file_path = parent_id
-                
-                # --- 修改這裡：使用 '::' 分割來獲取 case_name ---
-                if '::' in item_id:
-                    case_name = item_id.split('::', 1)[1] # <-- 現在這個才是純粹的測試案例名稱
-                else:
-                    print(f"錯誤: 測試案例節點 ID 格式不正確，沒有 '::': {item_id}")
-                    return
-                # --------------------------------------------------------
-
-                print(f"**準備查詢: py_file_path='{py_file_path}', case_name='{case_name}'**") 
+                py_file_path = parts[0]
+                case_name = parts[1] 
 
                 if py_file_path in self.selected_cases_by_file and \
                    case_name in self.selected_cases_by_file[py_file_path]:
@@ -374,11 +332,6 @@ class App(tk.Tk):
                     self.update_checkbox_display(item_id, current_var.get())
                     self.update_file_node_checkbox_display(py_file_path) 
                     self.update_selected_count_label()
-                    print(f"測試案例 '{case_name}' 狀態已切換到: {current_var.get()}")
-                else:
-                    print(f"警告: 無法在 self.selected_cases_by_file 中找到測試案例，查詢鍵為: '{case_name}' (屬於 '{py_file_path}')")
-        else:
-            print(f"點擊不在 '選擇' 列 (Column: {column})，無操作。")
 
     def update_checkbox_display(self, item_id, is_selected):
         current_values = list(self.tree.item(item_id, "values"))
@@ -411,7 +364,6 @@ class App(tk.Tk):
 
         self.tree.item(file_node_id, values=current_values)
 
-
     def update_selected_count_label(self):
         count = 0
         for file_cases in self.selected_cases_by_file.values():
@@ -422,7 +374,7 @@ class App(tk.Tk):
         for py_file_path, file_cases in self.selected_cases_by_file.items():
             for case_name, var in file_cases.items():
                 var.set(True)
-                item_id = f"{py_file_path}-{case_name}"
+                item_id = f"{py_file_path}::{case_name}" 
                 self.update_checkbox_display(item_id, True)
             self.update_file_node_checkbox_display(py_file_path) 
         self.update_selected_count_label()
@@ -432,7 +384,7 @@ class App(tk.Tk):
         for py_file_path, file_cases in self.selected_cases_by_file.items():
             for case_name, var in file_cases.items():
                 var.set(False)
-                item_id = f"{py_file_path}-{case_name}"
+                item_id = f"{py_file_path}::{case_name}" 
                 self.update_checkbox_display(item_id, False)
             self.update_file_node_checkbox_display(py_file_path) 
         self.update_selected_count_label()
@@ -443,7 +395,7 @@ class App(tk.Tk):
 
         for py_file_path, file_cases in self.selected_cases_by_file.items():
             file_info = self.py_files[py_file_path]
-            module_name = file_info['module_name']
+            module_name = os.path.splitext(os.path.basename(py_file_path))[0] # 確保這裡使用 file_path 來獲取 module_name
             test_class_name = file_info['test_class_name'] if file_info['test_class_name'] else "MyTestCase"
 
             for case_name, var in file_cases.items():
@@ -473,6 +425,7 @@ class App(tk.Tk):
             "import unittest\n",
             "import HTMLTestRunner # type: ignore\n",
             "import os\n",
+            "from datetime import datetime\n", # 確保 datetime 模組在生成的檔案最上方被導入
             "\n"
         ]
 
@@ -485,23 +438,54 @@ class App(tk.Tk):
         output_content.append("    report_dir = 'D:/SeleniumProject/test_reports'\n")
         output_content.append("    os.makedirs(report_dir, exist_ok=True)\n")
         output_content.append("\n")
-
+        
         for mod_name, info in sorted(selected_cases_by_module.items()):
-            class_name = info['class_name']
+            current_class_name = info['class_name'] 
+            
+            if not info['cases']:
+                continue 
+                
             output_content.append(f"    print(f\"\\n--- Running tests for {mod_name}.py ---\")\n")
             output_content.append(f"    suite = unittest.TestSuite()\n")
-            for case_name in info['cases']:
-                output_content.append(f"    suite.addTest({class_name}('{case_name}'))\n")
             
-            output_content.append(f"    report_file_{mod_name} = os.path.join(report_dir, f'Report_{mod_name}.html')\n")
-            output_content.append(f"    with open(report_file_{mod_name}, 'wb') as f:\n")
-            output_content.append(f"        runner = HTMLTestRunner.HTMLTestRunner(\n")
-            output_content.append("            stream=f,\n")
-            output_content.append(f"            title='{mod_name} Test Report',\n")
-            output_content.append("            description='Individual test report for {mod_name}.py'\n")
-            output_content.append("        )\n")
-            output_content.append(f"        runner.run(suite)\n")
-            output_content.append(f"    print(f\"Test report for {mod_name}.py saved to {{report_file_{mod_name}}}\")\n")
+            output_content.append(f"    class_name = '{current_class_name}'\n") 
+            
+            # 收集所有選定的測試案例名稱，用於報告描述
+            selected_test_cases_str = ', '.join([f"'{case_name}'" for case_name in info['cases']]) # 將列表轉換為字串
+            output_content.append(f"    selected_cases_list = [{selected_test_cases_str}]\n") # 在生成的檔案中創建一個列表
+            output_content.append(f"    cases_description = '包含測試案例: ' + ', '.join(selected_cases_list)\n")
+
+            for case_name in info['cases']:
+                output_content.append(f"    suite.addTest({current_class_name}('{case_name}'))\n") 
+            
+            output_content.append(f"    os.makedirs('D:/SeleniumProject/test_reports', exist_ok=True)\n")
+            output_content.append(f"    existing_files = set(os.listdir('D:/SeleniumProject/test_reports'))\n")
+            output_content.append(f"    runner = HTMLTestRunner.HTMLTestRunner(\n")
+            output_content.append(f"        output='D:/SeleniumProject/test_reports',\n") 
+            output_content.append(f"        title=f'Test Report for {{class_name}} ({mod_name})',\n") 
+            output_content.append(f"        description=f'Test results for {{class_name}} class in {mod_name} module. {{cases_description}}'\n") 
+            output_content.append("    )\n")
+            output_content.append(f"    runner.run(suite)\n")
+            output_content.append(f"    new_files = set(os.listdir('D:/SeleniumProject/test_reports')) - existing_files\n")
+            output_content.append(f"    new_html_report_path = None\n")
+            output_content.append(f"    for f_name in new_files:\n")
+            output_content.append(f"        if f_name.endswith('.html'):\n")
+            output_content.append(f"            new_html_report_path = os.path.join('D:/SeleniumProject/test_reports', f_name)\n")
+            output_content.append(f"            break\n")
+            output_content.append(f"    \n")
+            output_content.append(f"    if new_html_report_path:\n")
+            output_content.append(f"        current_date = datetime.now().strftime('%Y%m%d_%H%M%S')\n")
+            output_content.append(f"        desired_report_name = f'{{class_name}}_{{current_date}}.html'\n")
+            output_content.append(f"        desired_report_full_path = os.path.join('D:/SeleniumProject/test_reports', desired_report_name)\n")
+            output_content.append(f"        try:\n")
+            output_content.append(f"            os.rename(new_html_report_path, desired_report_full_path)\n")
+            output_content.append(f"            print(f\"Test report for {{class_name}} saved and renamed to {{desired_report_full_path}}\")\n")
+            output_content.append(f"        except Exception as e:\n")
+            output_content.append(f"            print(f\"Error renaming report for {{class_name}}: {{e}}\")\n")
+            output_content.append(f"            print(f\"Original report path: {{new_html_report_path}}\")\n")
+            output_content.append(f"    else:\n")
+            output_content.append(f"        print(f\"Could not find newly generated HTML report for {{class_name}} in D:/SeleniumProject/test_reports\")\n")
+                            
             output_content.append("\n")
         
         output_content.append("    print(\"\\n--- All selected test suites have been executed and reported. ---\")\n")
@@ -509,7 +493,7 @@ class App(tk.Tk):
         try:
             with open(file_path, "w", encoding="utf-8") as f:
                 f.writelines(output_content)
-            self.show_status_message(f"Unittest Plan 已成功匯出到 '{os.path.basename(file_path)}'，報告將生成在 'D:/SeleniumProject/test_reports'。可點選開啟PY資料夾。", "success")
+            self.show_status_message(f"Unittest Plan 已成功匯出到 '{os.path.basename(file_path)}' 'D:/SeleniumProject/test_reports' 資料夾中。可點選開啟PY資料夾。", "success")
         except Exception as e:
             self.show_status_message(f"匯出檔案時發生錯誤: {e}", "error")
 
@@ -542,8 +526,8 @@ class App(tk.Tk):
         if not html_dir:
             self.show_status_message("取消選擇 HTML 報告資料夾。", "info")
             return
-        self.last_html_report_folder = html_dir # 儲存選擇的 HTML 資料夾路徑
-        self.open_report_folder_btn.config(state=tk.NORMAL) # 啟用按鈕
+        self.last_html_report_folder = html_dir 
+        self.open_report_folder_btn.config(state=tk.NORMAL) 
 
         excel_files_in_result = [f for f in os.listdir("Result") if f.endswith((".xlsx", ".xls"))]
         if not excel_files_in_result:
@@ -556,20 +540,23 @@ class App(tk.Tk):
             workbook = load_workbook(testplan_path_in_result)
             sheet = workbook.active 
 
-            read_col = self.read_col_entry.get().upper()
-            read_row = int(self.read_row_entry.get()) - 1 
-            write_col = self.write_col_entry.get().upper()
-            write_row = int(self.write_row_entry.get()) - 1
+            read_col_str = self.read_col_entry.get().upper()
+            read_row_int = int(self.read_row_entry.get()) - 1 
+            write_col_str = self.write_col_entry.get().upper()
+            write_row_int = int(self.write_row_entry.get()) - 1
 
-            if not read_col.isalpha() or not write_col.isalpha():
+            if not read_col_str.isalpha() or not write_col_str.isalpha():
                 self.show_status_message("讀取/寫入欄位必須是字母 (例如 A, B)！", "error")
                 return
-            if read_row < 0 or write_row < 0:
+            if read_row_int < 0 or write_row_int < 0:
                 self.show_status_message("讀取/寫入行數必須是正整數！", "error")
                 return
 
-            read_col_idx = ord(read_col) - ord('A') 
-            write_col_idx = ord(write_col) - ord('A')
+            # openpyxl 的列是 1-based index, get_column_letter 輸出的是字母
+            # 我們需要的是 openpyxl 內部的數字索引 (1-based)
+            read_col_idx = get_column_letter(ord(read_col_str) - ord('A') + 1)
+            write_col_idx = get_column_letter(ord(write_col_str) - ord('A') + 1)
+
 
             html_files = [f for f in os.listdir(html_dir) if f.endswith(".html")]
             if not html_files:
@@ -605,17 +592,29 @@ class App(tk.Tk):
                     self.show_status_message(f"解析 HTML 檔案 '{html_file}' 內容時發生錯誤: {e}", "warning")
 
             results_written_count = 0
-            for row_idx, row in enumerate(sheet.iter_rows()):
-                if row_idx < read_row: 
+            for row_idx, row_data in enumerate(sheet.iter_rows()): # 使用 iter_rows 迭代器更有效率
+                current_excel_row_num = row_idx + 1 # Excel 行號從 1 開始
+
+                if current_excel_row_num < read_row_int + 1: # 從使用者輸入的起始行開始處理
                     continue
 
-                testcase_name_cell = sheet.cell(row=row_idx + 1, column=read_col_idx + 1) 
+                # 獲取 Test Case 名稱 (使用使用者提供的讀取欄位)
+                testcase_name_cell = sheet[f"{read_col_str}{current_excel_row_num}"]
                 testcase_name = str(testcase_name_cell.value).strip() if testcase_name_cell.value else ""
 
                 if testcase_name: 
                     if testcase_name in all_html_results:
                         result_to_write = all_html_results[testcase_name]
-                        sheet.cell(row=row_idx + 1, column=write_col_idx + 1, value=result_to_write)
+                        
+                        # 定位寫入結果的儲存格
+                        write_cell = sheet[f"{write_col_str}{current_excel_row_num}"]
+                        write_cell.value = result_to_write
+                        
+                        write_cell.font = Font() # 預設字體
+                        write_cell.border = Border() # 無邊框
+                        write_cell.fill = PatternFill(fill_type=None) # 無填充
+                        write_cell.alignment = Alignment() # 預設對齊
+
                         results_written_count += 1
 
             original_filename = os.path.basename(testplan_path_in_result)
@@ -633,9 +632,9 @@ class App(tk.Tk):
                 return
 
             workbook.save(save_path)
-            self.last_excel_save_path = save_path # 儲存保存的 Excel 路徑
+            self.last_excel_save_path = save_path 
             self.show_status_message(f"測試結果已成功寫入並保存到:\n{save_path}", "success")
-            self.open_report_folder_btn.config(state=tk.NORMAL) # 啟用按鈕
+            self.open_report_folder_btn.config(state=tk.NORMAL) 
 
         except Exception as e:
             self.show_status_message(f"寫入結果到 Excel 時發生錯誤: {e}", "error")
