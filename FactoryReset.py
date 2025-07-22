@@ -93,7 +93,7 @@ class FactoryReset(unittest.TestCase):
         time.sleep(2)
 
     #Case 01:檢查亮度是否為50%
-    def test_case01_Check_Brightness(self):
+    def test_case001_Check_Brightness(self):
         
         #點擊Image按鈕進入image頁面
         Image_button = self.driver.find_element(By.ID, "a_Image")
@@ -110,7 +110,7 @@ class FactoryReset(unittest.TestCase):
             self.fail("factory reset does not work(Brightness)")
     
     #Case 02:檢查contast是否為50%
-    def test_case02_Check_Contrast(self):
+    def test_case002_Check_Contrast(self):
         
         #點擊Image按鈕進入image頁面
         Image_button = self.driver.find_element(By.ID, "a_Image")
@@ -127,7 +127,7 @@ class FactoryReset(unittest.TestCase):
             self.fail("factory reset button does not work(Contrast)")
     
     #Case 03:檢查Saturation是否為50%
-    def test_case03_Check_Saturation(self):
+    def test_case003_Check_Saturation(self):
         
         #點擊Image按鈕進入image頁面
         Image_button = self.driver.find_element(By.ID, "a_Image")
@@ -144,7 +144,7 @@ class FactoryReset(unittest.TestCase):
             self.fail("factory reset button does not work(Saturation)")
     
     #Case 04:檢查Sharpness是否為50%
-    def test_case04_Check_Sharpness(self):
+    def test_case004_Check_Sharpness(self):
         
         #點擊Image按鈕進入image頁面
         Image_button = self.driver.find_element(By.ID, "a_Image")
@@ -161,7 +161,7 @@ class FactoryReset(unittest.TestCase):
             self.fail("factory reset button does not work(Sharpness)")
     
     #Case 05:檢查Gamma是否為50%
-    def test_case05_Check_Gamma(self):
+    def test_case005_Check_Gamma(self):
         
         #點擊Image按鈕進入image頁面
         Image_button = self.driver.find_element(By.ID, "a_Image")
@@ -176,6 +176,56 @@ class FactoryReset(unittest.TestCase):
             print("factory button works, change Gamma to 50%")
         else:
             self.fail("factory reset button does not work1(Gamma1)")
+    
+    #Case 06:檢查auto_wb_mode是否為on
+    def test_case006_Check_Auto_wb_Mode(self):
+        #點擊Image按鈕進入image頁面
+        Image_button = self.driver.find_element(By.ID, "a_Image")
+        Image_button.click()
+        time.sleep(2)
+        #判斷是否為on
+        checkbox = self.driver.find_element(By.ID, "WhiteBalanceAuto")
+        if checkbox.is_selected():
+            print("WhiteBalanceAuto is ON")
+        else:
+            self.fail("WhiteBalanceAuto is OFF")
+    
+    #Case 07:檢查色溫是否為5000k
+    def test_case07_Check_Color_Temperature(self):
+        #點擊Image按鈕進入image頁面
+        Image_button = self.driver.find_element(By.ID, "a_Image")
+        Image_button.click()
+        time.sleep(2)
+        checkbox = self.driver.find_element(By.CSS_SELECTOR, "#div_WhiteBalance .slider")
+        if checkbox.is_selected():
+            checkbox.click()  # 若不是OFF，點一下勾選它
+        # 找到色溫滑桿
+        color_temp_slider = self.driver.find_element(By.ID, "slider_colorTemperature")
+        # 取得當前的 value 屬性
+        current_temp = color_temp_slider.get_attribute("value")
+        # 驗證是否為 5000K
+        if current_temp == "5000":
+            print("Color temperature is 5000K")
+        else:
+            self.fail(f"Color temperature is {current_temp}K, not 5000K")
+        #等待兩秒後切換回為ON，不能馬上切換，否則會失敗
+        time.sleep(2)
+        checkbox1 = self.driver.find_element(By.CSS_SELECTOR, "#div_WhiteBalance .slider")
+        if not checkbox1.is_selected():
+            checkbox1.click()  # 若不是 ON，點一下勾選它
+
+    #Case 08:檢查LDC是否為off
+    def test_case008_Check_LDC(self):
+        #點擊Image按鈕進入image頁面
+        Image_button = self.driver.find_element(By.ID, "a_Image")
+        Image_button.click()
+        time.sleep(2)
+        #判斷是否為off
+        checkbox = self.driver.find_element(By.ID, "LDC")
+        if checkbox.is_selected():
+            self.fail("LDC is ON")
+        else:
+            print("LDC is OFF")
 
 
     @classmethod
