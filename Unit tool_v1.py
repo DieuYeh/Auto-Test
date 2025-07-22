@@ -10,6 +10,8 @@ from bs4 import BeautifulSoup
 import subprocess
 from datetime import datetime
 
+'''更新時間: 2025/07/22'''
+
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
