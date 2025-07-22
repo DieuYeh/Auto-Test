@@ -15,7 +15,8 @@ import HTMLTestRunner # type: ignore
 import os
 import configparser
 
-class MyTestCase(unittest.TestCase):
+
+class FactoryReset(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -64,6 +65,7 @@ class MyTestCase(unittest.TestCase):
         LoginIn_button.click()
         time.sleep(10)
 
+        '''
         #點擊Administrator按鈕進入Management頁面
         Administrator_button = cls.driver.find_element(By.XPATH, "//span[@data-lang='span_A026']")
         Administrator_button.click()
@@ -84,7 +86,7 @@ class MyTestCase(unittest.TestCase):
         LoginIn_button = cls.driver.find_element(By.ID, "button_SignIn_OK")
         LoginIn_button.click()
         time.sleep(10)
-           
+        '''
         
     def setUp(self):
 
@@ -92,12 +94,6 @@ class MyTestCase(unittest.TestCase):
 
     #Case 01:檢查亮度是否為50%
     def test_case01_Check_Brightness(self):
-
-        #定義圖片的基本儲存路徑
-        base_path = 'D:/SeleniumProject/Resolution/'
-        #如果路徑不存在，則創建資料夾
-        if not os.path.exists(base_path):
-            os.makedirs(base_path)
         
         #點擊Image按鈕進入image頁面
         Image_button = self.driver.find_element(By.ID, "a_Image")
@@ -105,13 +101,81 @@ class MyTestCase(unittest.TestCase):
         time.sleep(2)
 
         # 定位到slider_Brightness元素
-        slider_Brightness = self.driver.find_element(By.ID, "input_Brightness1")
+        slider_Brightness = self.driver.find_element(By.ID, "input_Brightness")
         slider_Brightness_style = slider_Brightness.get_attribute('value')
         print(slider_Brightness_style)
         if slider_Brightness_style=="50%":
-            print("Default button works")
+            print("factory button works, change brightness to 50%")
         else:
-            self.fail("Default button does not work(Brightness)")
+            self.fail("factory reset does not work(Brightness)")
+    
+    #Case 02:檢查contast是否為50%
+    def test_case02_Check_Contrast(self):
+        
+        #點擊Image按鈕進入image頁面
+        Image_button = self.driver.find_element(By.ID, "a_Image")
+        Image_button.click()
+        time.sleep(2)
+
+        # 定位到slider_Contrast元素
+        slider_Contrast = self.driver.find_element(By.ID, "input_Contrast")
+        slider_Contrast_style = slider_Contrast.get_attribute('value')
+        print(slider_Contrast_style)
+        if slider_Contrast_style=="50%":
+            print("factory button works, change contrast to 50%")
+        else:
+            self.fail("factory reset button does not work(Contrast)")
+    
+    #Case 03:檢查Saturation是否為50%
+    def test_case03_Check_Saturation(self):
+        
+        #點擊Image按鈕進入image頁面
+        Image_button = self.driver.find_element(By.ID, "a_Image")
+        Image_button.click()
+        time.sleep(2)
+
+        # 定位到slider_Saturation元素
+        slider_Saturation = self.driver.find_element(By.ID, "input_Saturation")
+        slider_Saturation_style = slider_Saturation.get_attribute('value')
+        print(slider_Saturation_style)
+        if slider_Saturation_style=="50%":
+            print("factory button works, change saturation to 50%")
+        else:
+            self.fail("factory reset button does not work(Saturation)")
+    
+    #Case 04:檢查Sharpness是否為50%
+    def test_case04_Check_Sharpness(self):
+        
+        #點擊Image按鈕進入image頁面
+        Image_button = self.driver.find_element(By.ID, "a_Image")
+        Image_button.click()
+        time.sleep(2)
+
+        # 定位到slider_Sharpness元素
+        slider_Sharpness = self.driver.find_element(By.ID, "input_Saturation")
+        slider_Sharpness_style = slider_Sharpness.get_attribute('value')
+        print(slider_Sharpness_style)
+        if slider_Sharpness_style=="50%":
+            print("factory button works, change sharpness to 50%")
+        else:
+            self.fail("factory reset button does not work(Sharpness)")
+    
+    #Case 05:檢查Gamma是否為50%
+    def test_case05_Check_Gamma(self):
+        
+        #點擊Image按鈕進入image頁面
+        Image_button = self.driver.find_element(By.ID, "a_Image")
+        Image_button.click()
+        time.sleep(2)
+
+        # 定位到slider_Gamma元素
+        slider_Gamma = self.driver.find_element(By.ID, "input_Gamma")
+        slider_Gamma_style = slider_Gamma.get_attribute('value')
+        print(slider_Gamma_style)
+        if slider_Gamma_style=="50%":
+            print("factory button works, change Gamma to 50%")
+        else:
+            self.fail("factory reset button does not work1(Gamma1)")
 
 
     @classmethod
