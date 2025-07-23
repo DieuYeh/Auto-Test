@@ -68,8 +68,7 @@ class FactoryReset(unittest.TestCase):
     def setUp(self):
 
         time.sleep(2)
-
-    
+ 
     #Case 12:檢查power line freduence是否為60hz
     def test_case012_Check_PowerLineSequence(self):
         #點擊Image按鈕進入image頁面
@@ -87,8 +86,7 @@ class FactoryReset(unittest.TestCase):
             print("The option is 60Hz")
         else:
             self.fail("The option is not 60Hz, it's " + status)
-             
-       
+                  
     @classmethod
     def tearDownClass(cls):
         cls.driver.quit()
