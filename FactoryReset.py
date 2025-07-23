@@ -231,7 +231,7 @@ class FactoryReset(unittest.TestCase):
             print("LDC is OFF")
     
     #Case 09:檢查Flip是否為off
-    def test_case09_Check_RotateViewFlip(self):
+    def test_case009_Check_RotateViewFlip(self):
         #點擊Image按鈕進入image頁面
         Image_button = self.driver.find_element(By.ID, "a_Image")
         Image_button.click()
@@ -263,7 +263,41 @@ class FactoryReset(unittest.TestCase):
             print("the option is 0°")
         else:
             self.fail("Video Orientation is not 0°, it's " + status)
+    
+     #Case 11:檢查DIS是否為off
+    def test_case011_Check_DIS(self):
+        #點擊Image按鈕進入image頁面
+        Image_button = self.driver.find_element(By.ID, "a_Image")
+        Image_button.click()
+        time.sleep(2)
+        #點擊Image config按鈕進入config頁面
+        Image_button = self.driver.find_element(By.ID, "a_ImageConfigs")
+        Image_button.click()
+        time.sleep(2)
+        #判斷是否為off
+        checkbox = self.driver.find_element(By.ID, "checkbox_DIS")
+        if checkbox.is_selected():
+            self.fail("DIS is ON")
+        else:
+            print("DIS is OFF")
 
+    #Case 12:檢查power line freduence是否為60hz
+    def test_case012_Check_PowerLineSequence(self):
+        #點擊Image按鈕進入image頁面
+        Image_button = self.driver.find_element(By.ID, "a_Image")
+        Image_button.click()
+        time.sleep(2)
+        #點擊Image config按鈕進入config頁面
+        Image_button = self.driver.find_element(By.ID, "a_ImageConfigs")
+        Image_button.click()
+        time.sleep(2)
+        #判斷是否為off
+        PowerLineSequence = self.driver.find_element(By.ID, "select_ImagePara_PowerLineFrequency_div")
+        status = PowerLineSequence.get_attribute("data-text")
+        if status == "60Hz":
+            print("The option is 60Hz")
+        else:
+            self.fail("The option is not 60Hz, it's " + status) 
 
     @classmethod
     def tearDownClass(cls):
