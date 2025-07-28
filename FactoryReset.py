@@ -172,6 +172,7 @@ class FactoryReset(unittest.TestCase):
         slider_Gamma = self.driver.find_element(By.ID, "input_Gamma")
         slider_Gamma_style = slider_Gamma.get_attribute('value')
         print(slider_Gamma_style)
+        #判斷是否為50%
         if slider_Gamma_style=="50%":
             print("factory button works, change Gamma to 50%")
         else:
@@ -229,6 +230,7 @@ class FactoryReset(unittest.TestCase):
             self.fail("LDC is ON")
         else:
             print("LDC is OFF")
+        time.sleep(3)
     
     #Case 09:檢查Flip是否為off
     def test_case009_Check_RotateViewFlip(self):
@@ -240,12 +242,14 @@ class FactoryReset(unittest.TestCase):
         Image_button = self.driver.find_element(By.ID, "a_ImageConfigs")
         Image_button.click()
         time.sleep(2)
+        #判斷是否為off
         flip_div = self.driver.find_element(By.ID, "select_ImagePara_Flip_div")
         status = flip_div.get_attribute("data-text")
         if status == "Off":
             print("選項目前是OFF")
         else:
             self.fail("flip is not off, it's " + status)
+        time.sleep(3)
 
     #Case 10:檢查VideoOrientation是否為0°
     def test_case010_Check_VideoOrientation(self):
@@ -257,6 +261,7 @@ class FactoryReset(unittest.TestCase):
         Image_button = self.driver.find_element(By.ID, "a_ImageConfigs")
         Image_button.click()
         time.sleep(2)
+        #判斷是否為0度
         flip_div = self.driver.find_element(By.ID, "select_ImagePara_VideoOrientation_div")
         status = flip_div.get_attribute("data-text")
         if status == "0°":
@@ -291,13 +296,68 @@ class FactoryReset(unittest.TestCase):
         Image_button = self.driver.find_element(By.ID, "a_ImageConfigs")
         Image_button.click()
         time.sleep(2)
-        #判斷是否為off
+        #判斷是否為60Hz
         PowerLineSequence = self.driver.find_element(By.ID, "select_ImagePara_PowerLineFrequency_div")
         status = PowerLineSequence.get_attribute("data-text")
         if status == "60Hz":
             print("The option is 60Hz")
         else:
-            self.fail("The option is not 60Hz, it's " + status) 
+            self.fail("The option is not 60Hz, it's " + status)
+        time.sleep(3)
+    
+    #Case 13:檢查Exposure Mode是否為Multimetering
+    def test_case013_Check_ExposureMode(self):
+        #點擊Image按鈕進入image頁面
+        Image_button = self.driver.find_element(By.ID, "a_Image")
+        Image_button.click()
+        time.sleep(2)
+        #點擊Image config按鈕進入config頁面
+        Image_button = self.driver.find_element(By.ID, "a_ExposureMode")
+        Image_button.click()
+        time.sleep(2)
+        #判斷是否為Multi Metering
+        ExposureMode = self.driver.find_element(By.ID, "select_ExposureMode_ExposureMode_div")
+        status = ExposureMode.get_attribute("data-text")
+        if status == "Multi Metering":
+            print("The option is Multi Metering")
+        else:
+            self.fail("The option is not Multi Metering, it's " + status)
+        
+    #Case 14:檢查AE Speed是否為50%
+    def test_case014_Check_AESpeed(self):
+        #點擊Image按鈕進入image頁面
+        Image_button = self.driver.find_element(By.ID, "a_Image")
+        Image_button.click()
+        time.sleep(2)
+        #點擊Image config按鈕進入config頁面
+        Image_button = self.driver.find_element(By.ID, "a_ExposureMode")
+        Image_button.click()
+        time.sleep(2)
+        #判斷是否為50
+        AESpeed = self.driver.find_element(By.ID, "select_ExposureMode_AESpeed_div")
+        status = AESpeed.get_attribute("data-text")
+        if status == "50%":
+            print("The option is 50%")
+        else:
+            self.fail("The option is not 50%, it's " + status)
+
+    #Case 15:檢查AE Sensitivity是否為50%
+    def test_case015_Check_AESensitivity(self):
+        #點擊Image按鈕進入image頁面
+        Image_button = self.driver.find_element(By.ID, "a_Image")
+        Image_button.click()
+        time.sleep(2)
+        #點擊Image config按鈕進入config頁面
+        Image_button = self.driver.find_element(By.ID, "a_ExposureMode")
+        Image_button.click()
+        time.sleep(2)
+        #判斷AE Sensitivity是否為50%
+        AESensitivity = self.driver.find_element(By.ID, "select_ExposureMode_AESensitivity_div")
+        status = AESensitivity.get_attribute("data-text")
+        if status == "50%":
+            print("The option is 50%")
+        else:
+            self.fail("The option is not 50%, it's " + status)
 
     @classmethod
     def tearDownClass(cls):

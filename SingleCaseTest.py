@@ -69,23 +69,24 @@ class FactoryReset(unittest.TestCase):
 
         time.sleep(2)
  
-    #Case 12:檢查power line freduence是否為60hz
-    def test_case012_Check_PowerLineSequence(self):
+    #Case 15:檢查AE Sensitivity是否為50%
+    def test_case015_Check_AESensitivity(self):
         #點擊Image按鈕進入image頁面
         Image_button = self.driver.find_element(By.ID, "a_Image")
         Image_button.click()
         time.sleep(2)
         #點擊Image config按鈕進入config頁面
-        Image_button = self.driver.find_element(By.ID, "a_ImageConfigs")
+        Image_button = self.driver.find_element(By.ID, "a_ExposureMode")
         Image_button.click()
         time.sleep(2)
-        #判斷是否為off
-        PowerLineSequence = self.driver.find_element(By.ID, "select_ImagePara_PowerLineFrequency_div")
-        status = PowerLineSequence.get_attribute("data-text")
-        if status == "60Hz":
-            print("The option is 60Hz")
+        #判斷是否為50
+        AESensitivity = self.driver.find_element(By.ID, "select_ExposureMode_AESensitivity_div")
+        status = AESensitivity.get_attribute("data-text")
+        if status == "50%":
+            print("The option is 50%")
         else:
-            self.fail("The option is not 60Hz, it's " + status)
+            self.fail("The option is not 50%, it's " + status)
+
                   
     @classmethod
     def tearDownClass(cls):
