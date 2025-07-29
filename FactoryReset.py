@@ -37,7 +37,7 @@ class FactoryReset(unittest.TestCase):
         
         # 使用該設定開啟chrome
         service = Service(ChromeDriverManager().install())
-        cls.driver = webdriver.Chrome()
+        cls.driver = webdriver.Chrome(options=chrome_options)
         cls.driver.implicitly_wait(10)
         cls.driver.maximize_window()
 
@@ -152,7 +152,7 @@ class FactoryReset(unittest.TestCase):
         time.sleep(2)
 
         # 定位到slider_Sharpness元素
-        slider_Sharpness = self.driver.find_element(By.ID, "input_Saturation")
+        slider_Sharpness = self.driver.find_element(By.ID, "input_Sharpness")
         slider_Sharpness_style = slider_Sharpness.get_attribute('value')
         print(slider_Sharpness_style)
         if slider_Sharpness_style=="50%":
@@ -197,7 +197,7 @@ class FactoryReset(unittest.TestCase):
         Image_button = self.driver.find_element(By.ID, "a_Image")
         Image_button.click()
         time.sleep(2)
-         #input的checkbox才是真正的狀態控制，slidery則是可點擊，因此判斷checkbox點擊slider
+         #input的checkbox才是真正的狀態控制，slider則是可點擊，因此判斷checkbox點擊slider
         checkbox = self.driver.find_element(By.CSS_SELECTOR, "#div_WhiteBalance input[type='checkbox']")
         slider = self.driver.find_element(By.CSS_SELECTOR, "#div_WhiteBalance .slider")
         if checkbox.is_selected():
