@@ -68,25 +68,27 @@ class FactoryReset(unittest.TestCase):
     def setUp(self):
 
         time.sleep(2)
- 
-    #Case 15:檢查AE Sensitivity是否為50%
-    def test_case015_Check_AESensitivity(self):
-        #點擊Image按鈕進入image頁面
-        Image_button = self.driver.find_element(By.ID, "a_Image")
-        Image_button.click()
-        time.sleep(2)
-        #點擊Image config按鈕進入config頁面
-        Image_button = self.driver.find_element(By.ID, "a_ExposureMode")
-        Image_button.click()
-        time.sleep(2)
-        #判斷是否為50
-        AESensitivity = self.driver.find_element(By.ID, "select_ExposureMode_AESensitivity_div")
-        status = AESensitivity.get_attribute("data-text")
-        if status == "50%":
-            print("The option is 50%")
-        else:
-            self.fail("The option is not 50%, it's " + status)
 
+     #到image頁面，到頁面後要等待兩秒，等待所有元素就位
+    def go_to_image_page(self):
+        WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "a_Image")))
+        elem = self.driver.find_element(By.ID, "a_Image")
+        WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable((By.ID, "a_Image")))
+        elem.click()
+        time.sleep(2)
+
+    #到advanced頁面
+    def go_to_advanced_page(self):
+        WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "a_Image")))
+        self.go_to_image_page()
+        WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable((By.ID, "a_AdvancedSetting"))).click()
+        time.sleep(4)
+ 
+    def test_case020_Check_LightLevel(self):
+         #到advance頁面檢查LightLevel
+        self.go_to_advanced_page()
+        status = self.driver.find_element(By.ID, "select_AS_LightLevel_div").get_attribute("data-text")
+        self.assertEqual(status, "Level 3", f"FilterMode is {status}, not Level 3")
                   
     @classmethod
     def tearDownClass(cls):

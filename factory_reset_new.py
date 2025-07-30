@@ -71,6 +71,13 @@ class FactoryReset(unittest.TestCase):
         WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable((By.ID, "a_ExposureMode"))).click()
         time.sleep(2)
 
+    #到advanced頁面
+    def go_to_advanced_page(self):
+        WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "a_Image")))
+        self.go_to_image_page()
+        WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable((By.ID, "a_AdvancedSetting"))).click()
+        time.sleep(3)
+
     def test_case001_Check_Brightness(self):
         self.go_to_image_page()
         WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "input_Brightness")))
@@ -170,16 +177,46 @@ class FactoryReset(unittest.TestCase):
         self.assertEqual(status, "Multi Metering", f"Exposure Mode is {status}, not Multi Metering")
 
     def test_case014_Check_AESpeed(self):
-         #到Exposure頁面檢查AESpeed
+        #到Exposure頁面檢查AESpeed
         self.go_to_exposure_mode_page()
         status = self.driver.find_element(By.ID, "select_ExposureMode_AESpeed_div").get_attribute("data-text")
         self.assertEqual(status, "50%", f"AE Speed is {status}, not 50%")
 
     def test_case015_Check_AESensitivity(self):
-         #到Exposure頁面檢查AESensitivity
+        #到Exposure頁面檢查AESensitivity
         self.go_to_exposure_mode_page()
         status = self.driver.find_element(By.ID, "select_ExposureMode_AESensitivity_div").get_attribute("data-text")
         self.assertEqual(status, "50%", f"AE Sensitivity is {status}, not 50%")
+    
+    def test_case016_Check_HDR_WDR(self):
+        #到advance頁面檢查HDR/WDR
+        self.go_to_advanced_page()
+        status = self.driver.find_element(By.ID, "select_Image_WDRAndHDR_div").get_attribute("data-text")
+        self.assertEqual(status, "Both On", f"HDR/WDR is {status}, not Both On")
+    
+    def test_case017_Check_DigitalNoiseReduction(self):
+        #到advance頁面檢查Digital Noise Reduction
+        self.go_to_advanced_page()
+        status = self.driver.find_element(By.ID, "select_Image_DigitalNoiseReduction_div").get_attribute("data-text")
+        self.assertEqual(status, "3D NR", f"Digital Noise Reduction is {status}, not 3D NR")
+    
+    def test_case018_Check_FilterMode(self):
+        #到advance頁面檢查FilterMode
+        self.go_to_advanced_page()
+        status = self.driver.find_element(By.ID, "select_AS_FilterMode_div").get_attribute("data-text")
+        self.assertEqual(status, "Auto", f"FilterMode is {status}, not Auto")
+    
+    def test_case019_Check_BaseOn(self):
+        #到advance頁面檢查BaseOn
+        self.go_to_advanced_page()
+        status = self.driver.find_element(By.ID, "select_AS_BaseOn_div").get_attribute("data-text")
+        self.assertEqual(status, "Light Sensor", f"FilterMode is {status}, not Light Sensor")
+    
+    def test_case020_Check_LightLevel(self):
+        #到advance頁面檢查LightLevel
+        self.go_to_advanced_page()
+        status = self.driver.find_element(By.ID, "select_AS_LightLevel_div").get_attribute("data-text")
+        self.assertEqual(status, "Level 3", f"FilterMode is {status}, not Level 3")
 
     @classmethod
     def tearDownClass(cls):
