@@ -49,7 +49,7 @@ class FactoryReset(unittest.TestCase):
     def setUp(self):
         time.sleep(2)
 
-    #到image頁面
+    #到image頁面，到頁面後要等待兩秒，等待所有元素就位
     def go_to_image_page(self):
         WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "a_Image")))
         elem = self.driver.find_element(By.ID, "a_Image")
@@ -118,6 +118,7 @@ class FactoryReset(unittest.TestCase):
 
         if checkbox.is_selected():
             slider.click()
+        #關閉白平衡後須等待兩秒，才能正常讀取value數值
         time.sleep(2)
         # 找到色溫滑桿
         color_temp_slider = self.driver.find_element(By.ID, "slider_colorTemperature")
