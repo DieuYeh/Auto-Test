@@ -4,13 +4,14 @@ import re
 import os
 import shutil
 from openpyxl import load_workbook
-from openpyxl.utils import get_column_letter
+from openpyxl.utils import get_column_letter, column_index_from_string # 引入 column_index_from_string
 from openpyxl.styles import Border, Side, Alignment, Font, PatternFill
+from openpyxl.worksheet.cell_range import CellRange
 from bs4 import BeautifulSoup
 import subprocess
 from datetime import datetime
 
-'''更新時間: 2025/07/22'''
+'''更新時間: 2025/07/31'''
 
 class App(tk.Tk):
     def __init__(self):
@@ -23,6 +24,7 @@ class App(tk.Tk):
         self.tree_file_nodes = {} 
         self.last_py_folder = None 
         self.last_html_report_folder = None
+        self.testplan_files_in_result = [] 
         self.last_excel_save_path = None
         
         self.status_label = tk.Label(self, text="準備就緒", bd=1, relief=tk.SUNKEN, anchor=tk.W, font=("Arial", 10))
@@ -395,7 +397,7 @@ class App(tk.Tk):
 
         for py_file_path, file_cases in self.selected_cases_by_file.items():
             file_info = self.py_files[py_file_path]
-            module_name = os.path.splitext(os.path.basename(py_file_path))[0] # 確保這裡使用 file_path 來獲取 module_name
+            module_name = os.path.splitext(os.path.basename(py_file_path))[0]
             test_class_name = file_info['test_class_name'] if file_info['test_class_name'] else "MyTestCase"
 
             for case_name, var in file_cases.items():
@@ -425,7 +427,7 @@ class App(tk.Tk):
             "import unittest\n",
             "import HTMLTestRunner # type: ignore\n",
             "import os\n",
-            "from datetime import datetime\n", # 確保 datetime 模組在生成的檔案最上方被導入
+            "from datetime import datetime\n",
             "\n"
         ]
 
@@ -450,9 +452,8 @@ class App(tk.Tk):
             
             output_content.append(f"    class_name = '{current_class_name}'\n") 
             
-            # 收集所有選定的測試案例名稱，用於報告描述
-            selected_test_cases_str = ', '.join([f"'{case_name}'" for case_name in info['cases']]) # 將列表轉換為字串
-            output_content.append(f"    selected_cases_list = [{selected_test_cases_str}]\n") # 在生成的檔案中創建一個列表
+            selected_test_cases_str = ', '.join([f"'{case_name}'" for case_name in info['cases']])
+            output_content.append(f"    selected_cases_list = [{selected_test_cases_str}]\n")
             output_content.append(f"    cases_description = '包含測試案例: ' + ', '.join(selected_cases_list)\n")
 
             for case_name in info['cases']:
@@ -485,7 +486,7 @@ class App(tk.Tk):
             output_content.append(f"            print(f\"Original report path: {{new_html_report_path}}\")\n")
             output_content.append(f"    else:\n")
             output_content.append(f"        print(f\"Could not find newly generated HTML report for {{class_name}} in D:/SeleniumProject/test_reports\")\n")
-                            
+                                    
             output_content.append("\n")
         
         output_content.append("    print(\"\\n--- All selected test suites have been executed and reported. ---\")\n")
@@ -498,48 +499,56 @@ class App(tk.Tk):
             self.show_status_message(f"匯出檔案時發生錯誤: {e}", "error")
 
     def load_testplan(self):
-        excel_file_path = filedialog.askopenfilenames(
+        # 讓使用者選擇多個檔案
+        excel_file_paths = filedialog.askopenfilenames(
+            title="選擇 Testplan (Excel) 檔案",
             filetypes=[
                 ("Excel files (XLSX)", "*.xlsx"), 
                 ("Excel files (XLS)", "*.xls")
             ]
         )
-        if excel_file_path:
-            result_dir = "Result"
-            os.makedirs(result_dir, exist_ok=True) 
-
-            for f_path in excel_file_path: 
-                dest_path = os.path.join(result_dir, os.path.basename(f_path))
-                try:
-                    shutil.copy(f_path, dest_path)
-                    self.show_status_message(f"已成功載入 Testplan: {os.path.basename(f_path)}", "success")
-                except Exception as e:
-                    self.show_status_message(f"複製檔案 '{os.path.basename(f_path)}' 時發生錯誤: {e}", "error")
-            if not excel_file_path: 
-                self.show_status_message("未選擇任何 Excel Testplan 檔案。", "warning") 
-        else:
+        if not excel_file_paths:
             self.show_status_message("取消載入 Excel Testplan。", "info")
+            return
 
+        result_dir = "Result"
+        os.makedirs(result_dir, exist_ok=True)
+        
+        # 清空舊的 Testplan 檔案列表
+        self.testplan_files_in_result.clear()
+        
+        for f_path in excel_file_paths:
+            dest_path = os.path.join(result_dir, os.path.basename(f_path))
+            try:
+                shutil.copy(f_path, dest_path)
+                self.testplan_files_in_result.append(dest_path)
+                self.show_status_message(f"已成功載入並複製 Testplan: {os.path.basename(f_path)}", "success")
+            except Exception as e:
+                self.show_status_message(f"複製檔案 '{os.path.basename(f_path)}' 時發生錯誤: {e}", "error")
+
+        if self.testplan_files_in_result:
+            self.show_status_message(f"已成功載入 {len(self.testplan_files_in_result)} 個 Testplan 檔案到 Result 資料夾。", "success")
+            self.open_report_folder_btn.config(state=tk.NORMAL)
+        else:
+            self.show_status_message("未選擇任何 Excel Testplan 檔案。", "warning")
 
     def write_results_to_excel(self):
         html_dir = filedialog.askdirectory(title="選擇包含 HTML 報告的資料夾")
         if not html_dir:
             self.show_status_message("取消選擇 HTML 報告資料夾。", "info")
             return
+        
         self.last_html_report_folder = html_dir 
         self.open_report_folder_btn.config(state=tk.NORMAL) 
 
-        excel_files_in_result = [f for f in os.listdir("Result") if f.endswith((".xlsx", ".xls"))]
-        if not excel_files_in_result:
+        # 這裡不再手動掃描 Result 資料夾，而是使用我們在 load_testplan 中儲存的列表
+        excel_files_to_process = self.testplan_files_in_result
+        
+        if not excel_files_to_process:
             self.show_status_message("Result 資料夾中沒有找到 Excel Testplan 檔案！請先載入。", "warning")
             return
 
-        testplan_path_in_result = os.path.join("Result", excel_files_in_result[0])
-
         try:
-            workbook = load_workbook(testplan_path_in_result)
-            sheet = workbook.active 
-
             read_col_str = self.read_col_entry.get().upper()
             read_row_int = int(self.read_row_entry.get()) - 1 
             write_col_str = self.write_col_entry.get().upper()
@@ -552,21 +561,15 @@ class App(tk.Tk):
                 self.show_status_message("讀取/寫入行數必須是正整數！", "error")
                 return
 
-            # openpyxl 的列是 1-based index, get_column_letter 輸出的是字母
-            # 我們需要的是 openpyxl 內部的數字索引 (1-based)
-            read_col_idx = get_column_letter(ord(read_col_str) - ord('A') + 1)
-            write_col_idx = get_column_letter(ord(write_col_str) - ord('A') + 1)
-
-
+            # 解析所有 HTML 檔案一次
+            all_html_results = {}
             html_files = [f for f in os.listdir(html_dir) if f.endswith(".html")]
             if not html_files:
                 self.show_status_message("選擇的資料夾中沒有找到 HTML 報告檔案。", "warning")
                 return
-
-            all_html_results = {}
+            
             for html_file in html_files:
                 file_path = os.path.join(html_dir, html_file)
-                
                 content = None
                 encodings_to_try = ['utf-8', 'gbk', 'cp950', 'latin-1'] 
                 for encoding in encodings_to_try:
@@ -575,13 +578,14 @@ class App(tk.Tk):
                             content = f.read()
                         break 
                     except UnicodeDecodeError:
-                        pass 
+                        pass
                     except Exception as e:
-                        break 
+                        self.show_status_message(f"讀取 HTML 檔案 '{html_file}' 內容時發生錯誤: {e}", "warning")
+                        break
 
                 if content is None:
-                    self.show_status_message(f"無法成功讀取 HTML 檔案 '{html_file}'，請檢查其編碼或檔案完整性。", "warning")
-                    continue 
+                    self.show_status_message(f"無法成功讀取 HTML 檔案 '{html_file}'。", "warning")
+                    continue
                 
                 try:
                     soup = BeautifulSoup(content, 'html.parser')
@@ -590,54 +594,59 @@ class App(tk.Tk):
                         all_html_results[item['name']] = item['result'] 
                 except Exception as e:
                     self.show_status_message(f"解析 HTML 檔案 '{html_file}' 內容時發生錯誤: {e}", "warning")
-
-            results_written_count = 0
-            for row_idx, row_data in enumerate(sheet.iter_rows()): # 使用 iter_rows 迭代器更有效率
-                current_excel_row_num = row_idx + 1 # Excel 行號從 1 開始
-
-                if current_excel_row_num < read_row_int + 1: # 從使用者輸入的起始行開始處理
-                    continue
-
-                # 獲取 Test Case 名稱 (使用使用者提供的讀取欄位)
-                testcase_name_cell = sheet[f"{read_col_str}{current_excel_row_num}"]
-                testcase_name = str(testcase_name_cell.value).strip() if testcase_name_cell.value else ""
-
-                if testcase_name: 
-                    if testcase_name in all_html_results:
-                        result_to_write = all_html_results[testcase_name]
-                        
-                        # 定位寫入結果的儲存格
-                        write_cell = sheet[f"{write_col_str}{current_excel_row_num}"]
-                        write_cell.value = result_to_write
-                        
-                        write_cell.font = Font() # 預設字體
-                        write_cell.border = Border() # 無邊框
-                        write_cell.fill = PatternFill(fill_type=None) # 無填充
-                        write_cell.alignment = Alignment() # 預設對齊
-
-                        results_written_count += 1
-
-            original_filename = os.path.basename(testplan_path_in_result)
-            name, ext = os.path.splitext(original_filename)
-            default_save_filename = f"{name}_results{ext}"
-
-            save_path = filedialog.asksaveasfilename(
-                defaultextension=".xlsx",
-                filetypes=[("Excel files", "*.xlsx"), ("All files", "*.*")],
-                initialfile=default_save_filename
-            )
-
-            if not save_path: 
-                self.show_status_message("已處理的 Excel 檔案未保存。", "warning")
+            
+            if not all_html_results:
+                self.show_status_message("從 HTML 報告中未提取到任何結果。", "warning")
                 return
 
-            workbook.save(save_path)
-            self.last_excel_save_path = save_path 
-            self.show_status_message(f"測試結果已成功寫入並保存到:\n{save_path}", "success")
-            self.open_report_folder_btn.config(state=tk.NORMAL) 
+            # 開始批次處理每一個 Testplan 檔案
+            total_results_written = 0
+            for testplan_path_in_result in excel_files_to_process:
+                self.show_status_message(f"正在處理 Testplan: {os.path.basename(testplan_path_in_result)}...", "info")
+                try:
+                    workbook = load_workbook(testplan_path_in_result)
+                    sheet = workbook.active
+                    results_written_count = 0
+                    
+                    for row_idx, row_data in enumerate(sheet.iter_rows()):
+                        current_excel_row_num = row_idx + 1
+                        if current_excel_row_num < read_row_int + 1:
+                            continue
+
+                        testcase_name_cell = sheet[f"{read_col_str}{current_excel_row_num}"]
+                        testcase_name = str(testcase_name_cell.value).strip() if testcase_name_cell.value else ""
+
+                        if testcase_name in all_html_results:
+                            result_to_write = all_html_results[testcase_name]
+                            write_cell = sheet[f"{write_col_str}{current_excel_row_num}"]
+                            write_cell.value = result_to_write
+                            
+                            write_cell.font = Font()
+                            write_cell.border = Border()
+                            write_cell.fill = PatternFill(fill_type=None)
+                            write_cell.alignment = Alignment()
+                            
+                            results_written_count += 1
+
+                    # 保存處理後的檔案，並在檔名中加入後綴，避免覆蓋原始檔案
+                    base, ext = os.path.splitext(os.path.basename(testplan_path_in_result))
+                    current_time_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    new_filename = f"{base}_Result_{current_time_str}{ext}"
+                    new_save_path = os.path.join(os.path.dirname(testplan_path_in_result), new_filename)
+                    
+                    workbook.save(new_save_path)
+                    self.show_status_message(f"Testplan '{os.path.basename(testplan_path_in_result)}' 處理完成，結果已儲存為 '{new_filename}'。", "success")
+                    total_results_written += results_written_count
+
+                except Exception as e:
+                    self.show_status_message(f"處理檔案 '{os.path.basename(testplan_path_in_result)}' 時發生錯誤: {e}", "error")
+
+            self.show_status_message(f"已完成所有 Testplan 的批次處理。總共寫入 {total_results_written} 筆結果。", "success")
+            # 由於批次處理，我們將 last_excel_save_path 指向最後處理的檔案路徑
+            self.last_excel_save_path = new_save_path
 
         except Exception as e:
-            self.show_status_message(f"寫入結果到 Excel 時發生錯誤: {e}", "error")
+            self.show_status_message(f"在批次處理過程中發生了非預期錯誤: {e}", "error")
 
     def parse_html_report(self, soup):
         all_test_results = []
